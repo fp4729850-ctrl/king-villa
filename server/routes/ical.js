@@ -1,4 +1,3 @@
-const express = require('event-target-shim'); // Wait I'll just use express properly
 const router = require('express').Router();
 const db = require('../db');
 const ical = require('node-ical');
