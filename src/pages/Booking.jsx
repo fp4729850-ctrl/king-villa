@@ -9,6 +9,7 @@ function Booking() {
   const [loading, setLoading] = useState(true);
   const [bookedDates, setBookedDates] = useState([]);
   const [dateError, setDateError] = useState('');
+  const [nights, setNights] = useState(1);
   
   const [formData, setFormData] = useState({
     checkIn: '',
@@ -42,8 +43,13 @@ function Booking() {
       
       if (start >= end) {
         setDateError('Check-out must be after check-in.');
+        setNights(1);
         return;
       }
+      
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setNights(diffDays);
       
       const overlap = bookedDates.some(b => {
         const bStart = new Date(b.checkIn);
@@ -59,14 +65,14 @@ function Booking() {
     }
   }, [formData.checkIn, formData.checkOut, bookedDates]);
 
-  const advanceAmount = parseInt(roomId) === 1 ? 2000 : 600;
+  const totalAmount = (room?.price || 0) * nights;
+  const advanceAmount = Math.round(totalAmount * 0.30);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (dateError) return;
     
-    const total = room.price; 
-    const amountToPay = formData.paymentType === 'advance' ? advanceAmount : total;
+    const amountToPay = formData.paymentType === 'advance' ? advanceAmount : totalAmount;
     
     const token = localStorage.getItem('token');
     if(!token) {
@@ -84,9 +90,9 @@ function Booking() {
         phone: formData.phone, 
         count: formData.guests,
         paymentType: formData.paymentType,
-        totalAmount: total,
-        advancePaid: formData.paymentType === 'advance' ? advanceAmount : total,
-        balanceAmount: formData.paymentType === 'advance' ? (total - advanceAmount) : 0
+        totalAmount: totalAmount,
+        advancePaid: amountToPay,
+        balanceAmount: totalAmount - amountToPay
       },
       amount: amountToPay
     }, {
@@ -150,17 +156,18 @@ function Booking() {
             <div style={{display: 'flex', gap: '2rem'}}>
               <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
                 <input type="radio" name="paymentType" value="full" checked={formData.paymentType === 'full'} onChange={() => setFormData({...formData, paymentType: 'full'})} />
-                Pay Full Amount (₹{room.price})
+                Pay Full Amount (₹{totalAmount})
               </label>
               <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
                 <input type="radio" name="paymentType" value="advance" checked={formData.paymentType === 'advance'} onChange={() => setFormData({...formData, paymentType: 'advance'})} />
-                Pay Advance (₹{advanceAmount})
+                Pay 30% Advance (₹{advanceAmount})
               </label>
             </div>
+            {nights > 1 && <p style={{fontSize: '0.9rem', color: '#ffb300', marginTop: '1rem'}}>Total price calculated for {nights} nights.</p>}
           </div>
           
           <button type="submit" className="btn btn-primary" style={{marginTop: '1rem'}}>
-            Proceed to Payment (₹{formData.paymentType === 'advance' ? advanceAmount : room.price})
+            Proceed to Payment (₹{formData.paymentType === 'advance' ? advanceAmount : totalAmount})
           </button>
         </form>
       </div>
