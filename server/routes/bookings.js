@@ -53,12 +53,14 @@ router.post('/:id/payment', auth, async (req, res) => {
     const { paymentProof } = req.body;
     if (!paymentProof) return res.status(400).json({ error: 'No file provided' });
     
-    await db.query(
-      'UPDATE bookings SET "paymentProof" = $1, status = $2 WHERE id = $3 AND "userId" = $4',
+    const updateRes = await db.query(
+      'UPDATE bookings SET "paymentProof" = $1, status = $2 WHERE id = $3 AND "userId" = $4 RETURNING "refCode"',
       [paymentProof, 'paid', req.params.id, req.user.id]
     );
     
-    res.json({ message: 'Payment proof uploaded', paymentProof: 'uploaded' });
+    if (updateRes.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+    
+    res.json({ message: 'Payment proof uploaded', refCode: updateRes.rows[0].refCode });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

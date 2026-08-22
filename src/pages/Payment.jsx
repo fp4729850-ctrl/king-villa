@@ -37,8 +37,11 @@ function Payment() {
     .then(res => {
       setUploading(false);
       alert('Payment proof uploaded successfully!');
-      // Navigate to my bookings or receipt (we need the ref code for receipt, let's just go to my bookings for now)
-      navigate('/my-bookings');
+      if(res.data.refCode) {
+        navigate(`/receipt/${res.data.refCode}`);
+      } else {
+        navigate('/my-bookings');
+      }
     })
     .catch(err => {
       setUploading(false);
