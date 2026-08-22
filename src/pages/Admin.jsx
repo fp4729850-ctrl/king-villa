@@ -144,6 +144,7 @@ function Admin() {
               <tr style={{borderBottom: '1px solid #333'}}>
                 <th style={{padding: '1rem'}}>Ref</th>
                 <th style={{padding: '1rem'}}>User</th>
+                <th style={{padding: '1rem'}}>Dates</th>
                 <th style={{padding: '1rem'}}>Room</th>
                 <th style={{padding: '1rem'}}>Amount</th>
                 <th style={{padding: '1rem'}}>Proof</th>
@@ -156,6 +157,10 @@ function Admin() {
                 <tr key={b.id} style={{borderBottom: '1px solid #222'}}>
                   <td style={{padding: '1rem'}}>{b.refCode}</td>
                   <td style={{padding: '1rem'}}>{b.userName}</td>
+                  <td style={{padding: '1rem', fontSize: '0.9rem', whiteSpace: 'nowrap'}}>
+                    <strong>In:</strong> {b.checkIn}<br/>
+                    <strong>Out:</strong> {b.checkOut}
+                  </td>
                   <td style={{padding: '1rem'}}>{b.roomName}</td>
                   <td style={{padding: '1rem'}}>₹{b.amount}</td>
                   <td style={{padding: '1rem'}}>
