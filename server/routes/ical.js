@@ -2,8 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const ical = require('node-ical');
 const icalGenerator = require('ical-generator').default;
-const auth = require('../middleware/auth');
-const adminAuth = require('../middleware/adminAuth');
+const { adminAuth } = require('./auth');
 
 // 1. EXPORT iCal: Platforms will GET this link
 router.get('/export/:roomId', async (req, res) => {
