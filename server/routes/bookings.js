@@ -1,20 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const db = require('../db');
 const { auth, adminAuth } = require('./auth');
-
-// Multer setup for payment screenshots
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../uploads/'))
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname)
-  }
-});
-const upload = multer({ storage: storage });
 
 // Create booking
 router.post('/', auth, async (req, res) => {
@@ -35,17 +22,17 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Upload payment proof
-router.post('/:id/payment', auth, upload.single('paymentProof'), async (req, res) => {
+router.post('/:id/payment', auth, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const { paymentProof } = req.body;
+    if (!paymentProof) return res.status(400).json({ error: 'No file provided' });
     
-    const filePath = '/uploads/' + req.file.filename;
     await db.query(
       'UPDATE bookings SET "paymentProof" = $1, status = $2 WHERE id = $3 AND "userId" = $4',
-      [filePath, 'paid', req.params.id, req.user.id]
+      [paymentProof, 'paid', req.params.id, req.user.id]
     );
     
-    res.json({ message: 'Payment proof uploaded', paymentProof: filePath });
+    res.json({ message: 'Payment proof uploaded', paymentProof: 'uploaded' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -15,17 +15,22 @@ function Payment() {
       .catch(err => console.error(err));
   }, []);
 
-  const handleUpload = (e) => {
+  const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return alert('Please select a file');
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append('paymentProof', file);
+    
+    // Convert to Base64
+    const base64Proof = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
 
-    axios.post(`/api/bookings/${bookingId}/payment`, formData, {
+    axios.post(`/api/bookings/${bookingId}/payment`, { paymentProof: base64Proof }, {
       headers: { 
-        'Content-Type': 'multipart/form-data',
         Authorization: `Bearer ${localStorage.getItem('token')}` 
       }
     })
@@ -55,8 +60,11 @@ function Payment() {
         <p style={{marginBottom: '1rem'}}>Please scan the QR code below or use the UPI ID to complete your payment.</p>
         
         <div style={{background: '#fff', padding: '1rem', display: 'inline-block', borderRadius: '8px', marginBottom: '1rem'}}>
-          {/* Mock QR Code */}
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${settings.upiId}`} alt="UPI QR" />
+          {settings.qrCode && settings.qrCode.startsWith('data:image') ? (
+            <img src={settings.qrCode} alt="Custom UPI QR" style={{width: '200px', height: '200px', objectFit: 'contain'}} />
+          ) : (
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${settings.upiId}`} alt="UPI QR" />
+          )}
         </div>
         
         <h3 style={{color: 'var(--primary-color)', marginBottom: '2rem'}}>UPI ID: {settings.upiId}</h3>
