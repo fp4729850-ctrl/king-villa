@@ -5,10 +5,15 @@ import ImageCarousel from '../components/ImageCarousel';
 
 function Home() {
   const [rooms, setRooms] = useState([]);
+  const [entireVilla, setEntireVilla] = useState(null);
 
   useEffect(() => {
     axios.get('/api/rooms')
-      .then(res => setRooms(res.data.slice(0, 4)))
+      .then(res => {
+        const allRooms = res.data;
+        setRooms(allRooms.filter(r => !r.isEntireVilla).slice(0, 4));
+        setEntireVilla(allRooms.find(r => r.isEntireVilla));
+      })
       .catch(err => console.error(err));
   }, []);
 
@@ -68,6 +73,21 @@ function Home() {
             </div>
           )) : <div className="text-center" style={{width: '100%', padding: '2rem'}}>Loading rooms...</div>}
         </div>
+
+        {entireVilla && (
+          <div style={{textAlign: 'center', marginTop: '4rem'}}>
+            <h3 style={{color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1.5rem'}}>Looking for complete privacy?</h3>
+            {entireVilla.isBookedToday ? (
+              <div style={{display: 'inline-block', background: 'rgba(255, 0, 0, 0.1)', color: '#ff6b6b', padding: '1rem 2rem', borderRadius: '4px', fontWeight: 'bold'}}>
+                Entire Villa is Currently Booked Today
+              </div>
+            ) : (
+              <Link to={`/booking/${entireVilla.id}`} className="btn btn-primary" style={{fontSize: '1.2rem', padding: '1rem 3rem'}}>
+                Book Entire King Villa
+              </Link>
+            )}
+          </div>
+        )}
       </section>
     </>
   );
