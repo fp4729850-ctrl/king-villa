@@ -61,6 +61,9 @@ function Home() {
               <div className="room-info">
                 <h3 className="room-name">{room.name}</h3>
                 <p className="room-desc">{room.description}</p>
+                <div style={{marginBottom: '1rem', color: 'var(--primary-color)', fontSize: '0.9rem'}}>
+                  Amenities: {room.amenities.join(', ')} | Capacity: {room.capacity}
+                </div>
                 
                 {room.isBookedToday && (
                   <div style={{background: 'rgba(255, 0, 0, 0.1)', color: '#ff6b6b', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold'}}>
