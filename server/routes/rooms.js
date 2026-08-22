@@ -14,12 +14,22 @@ router.get('/', async (req, res) => {
       room.amenities = JSON.parse(room.amenities || '[]');
       room.images = JSON.parse(room.images || '[]');
       
-      const overlapRes = await db.query(`
-        SELECT id FROM bookings
-        WHERE "roomId" = $1 
-        AND status IN ('paid', 'confirmed', 'cancel_request')
-        AND ("checkIn" <= $2 AND "checkOut" > $2)
-      `, [room.id, today]);
+      let overlapRes;
+      if (room.isEntireVilla) {
+        overlapRes = await db.query(`
+          SELECT id FROM bookings
+          WHERE status IN ('paid', 'confirmed', 'cancel_request')
+          AND ("checkIn" <= $1 AND "checkOut" > $1)
+        `, [today]);
+      } else {
+        overlapRes = await db.query(`
+          SELECT b.id FROM bookings b
+          JOIN rooms r ON b."roomId" = r.id
+          WHERE (b."roomId" = $1 OR r."isEntireVilla" = true)
+          AND b.status IN ('paid', 'confirmed', 'cancel_request')
+          AND (b."checkIn" <= $2 AND b."checkOut" > $2)
+        `, [room.id, today]);
+      }
       
       room.isBookedToday = overlapRes.rows.length > 0;
     }

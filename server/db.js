@@ -66,6 +66,22 @@ const initDB = async () => {
         );
       }
     }
+    
+    // Migration: add isEntireVilla column if not exists
+    try {
+      await pool.query('ALTER TABLE rooms ADD COLUMN "isEntireVilla" BOOLEAN DEFAULT false');
+    } catch(err) {
+      // column likely already exists, ignore
+    }
+
+    // Seed Entire Villa room if not exists
+    const entireVillaRes = await pool.query('SELECT * FROM rooms WHERE "isEntireVilla" = true');
+    if (entireVillaRes.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO rooms (name, description, price, capacity, amenities, images, "isEntireVilla") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        ['Entire King Villa', 'Experience ultimate luxury and privacy by booking the entire property. Includes all 4 royal rooms, private pool access, and exclusive amenities for your entire group.', 7300, 8, JSON.stringify(['WiFi', 'AC', 'TV', 'Private Pool', 'Kitchen']), JSON.stringify(['https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?q=80&w=1000&auto=format&fit=crop']), true]
+      );
+    }
   } catch (err) {
     console.error("DB Init error", err);
   }

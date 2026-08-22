@@ -10,13 +10,34 @@ router.post('/', auth, async (req, res) => {
   const refCode = 'KV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
   try {
-    // Check for overlaps with paid, confirmed or cancel_request bookings
-    const overlapRes = await db.query(`
-      SELECT id FROM bookings
-      WHERE "roomId" = $1 
-      AND status IN ('paid', 'confirmed', 'cancel_request')
-      AND ("checkIn" < $2 AND "checkOut" > $3)
-    `, [roomId, checkOut, checkIn]);
+    // Check if the requested room is Entire Villa
+    const roomRes = await db.query('SELECT "isEntireVilla" FROM rooms WHERE id = $1', [roomId]);
+    const isEntireVilla = roomRes.rows[0]?.isEntireVilla;
+
+    let overlapQuery;
+    let queryParams;
+    
+    if (isEntireVilla) {
+       // Conflicts with ANY room booking for these dates
+       overlapQuery = `
+         SELECT id FROM bookings
+         WHERE status IN ('paid', 'confirmed', 'cancel_request')
+         AND ("checkIn" < $1 AND "checkOut" > $2)
+       `;
+       queryParams = [checkOut, checkIn];
+    } else {
+       // Conflicts with THIS room OR the Entire Villa
+       overlapQuery = `
+         SELECT b.id FROM bookings b
+         JOIN rooms r ON b."roomId" = r.id
+         WHERE (b."roomId" = $1 OR r."isEntireVilla" = true)
+         AND b.status IN ('paid', 'confirmed', 'cancel_request')
+         AND (b."checkIn" < $2 AND b."checkOut" > $3)
+       `;
+       queryParams = [roomId, checkOut, checkIn];
+    }
+
+    const overlapRes = await db.query(overlapQuery, queryParams);
     
     if (overlapRes.rows.length > 0) {
       return res.status(400).json({ error: 'Room is already booked for these dates' });
@@ -36,11 +57,26 @@ router.post('/', auth, async (req, res) => {
 // Get booked dates for a room
 router.get('/room/:roomId/dates', async (req, res) => {
   try {
-    const bookingsRes = await db.query(`
-      SELECT "checkIn", "checkOut" 
-      FROM bookings 
-      WHERE "roomId" = $1 AND status IN ('paid', 'confirmed', 'cancel_request')
-    `, [req.params.roomId]);
+    const roomRes = await db.query('SELECT "isEntireVilla" FROM rooms WHERE id = $1', [req.params.roomId]);
+    const isEntireVilla = roomRes.rows[0]?.isEntireVilla;
+    
+    let query;
+    let params;
+    if (isEntireVilla) {
+      query = `SELECT "checkIn", "checkOut" FROM bookings WHERE status IN ('paid', 'confirmed', 'cancel_request')`;
+      params = [];
+    } else {
+      query = `
+        SELECT b."checkIn", b."checkOut" 
+        FROM bookings b
+        JOIN rooms r ON b."roomId" = r.id
+        WHERE (b."roomId" = $1 OR r."isEntireVilla" = true) 
+        AND b.status IN ('paid', 'confirmed', 'cancel_request')
+      `;
+      params = [req.params.roomId];
+    }
+
+    const bookingsRes = await db.query(query, params);
     res.json(bookingsRes.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
