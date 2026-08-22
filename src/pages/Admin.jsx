@@ -224,7 +224,7 @@ function Admin() {
             <thead>
               <tr style={{borderBottom: '1px solid #333'}}>
                 <th style={{padding: '1rem'}}>Ref</th>
-                <th style={{padding: '1rem'}}>User</th>
+                <th style={{padding: '1rem'}}>User / Platform</th>
                 <th style={{padding: '1rem'}}>Dates</th>
                 <th style={{padding: '1rem'}}>Room</th>
                 <th style={{padding: '1rem'}}>Amount</th>
@@ -235,9 +235,26 @@ function Admin() {
             </thead>
             <tbody>
               {bookings.map(b => (
-                <tr key={b.id} style={{borderBottom: '1px solid #222'}}>
+                <tr key={b.id} style={{borderBottom: '1px solid #222', background: b.status === 'external' ? 'rgba(100, 100, 255, 0.05)' : 'transparent'}}>
                   <td style={{padding: '1rem'}}>{b.refCode}</td>
-                  <td style={{padding: '1rem'}}>{b.userName}</td>
+                  <td style={{padding: '1rem'}}>
+                    {b.status === 'external' ? (
+                      <span style={{
+                        background: b.guestDetails?.platform === 'Airbnb' ? '#FF5A5F'
+                                  : b.guestDetails?.platform === 'Booking.com' ? '#003580'
+                                  : b.guestDetails?.platform === 'Agoda' ? '#e43d30'
+                                  : b.guestDetails?.platform === 'Goibibo/MMT' ? '#f26522'
+                                  : '#555',
+                        color: '#fff',
+                        padding: '0.3rem 0.7rem',
+                        borderRadius: '4px',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {b.guestDetails?.platform || 'OTA'}
+                      </span>
+                    ) : b.userName}
+                  </td>
                   <td style={{padding: '1rem', fontSize: '0.9rem', whiteSpace: 'nowrap'}}>
                     <strong>In:</strong> {b.checkIn}<br/>
                     <strong>Out:</strong> {b.checkOut}

@@ -47,12 +47,25 @@ router.post('/sync', adminAuth, async (req, res) => {
 
     for (const room of roomsRes.rows) {
       const linksData = JSON.parse(room.icalLinks || '{}');
-      const linkUrls = Array.isArray(linksData) ? linksData : Object.values(linksData).filter(l => l && l.trim() !== '');
-      if (linkUrls.length === 0) continue;
+      // linksData is an object like { airbnb: '...', booking: '...', agoda: '...', goibibo: '...' }
+      const platformEntries = Array.isArray(linksData) 
+        ? linksData.map(url => ({ platform: 'OTA', url }))
+        : Object.entries(linksData)
+            .filter(([_, url]) => url && url.trim() !== '')
+            .map(([platform, url]) => ({ 
+              platform: platform === 'airbnb' ? 'Airbnb' 
+                      : platform === 'booking' ? 'Booking.com' 
+                      : platform === 'agoda' ? 'Agoda' 
+                      : platform === 'goibibo' ? 'Goibibo/MMT' 
+                      : platform,
+              url 
+            }));
 
-      for (const link of linkUrls) {
+      if (platformEntries.length === 0) continue;
+
+      for (const { platform, url } of platformEntries) {
         try {
-          const events = await ical.async.fromURL(link);
+          const events = await ical.async.fromURL(url);
           
           for (const key in events) {
             const ev = events[key];
@@ -60,12 +73,12 @@ router.post('/sync', adminAuth, async (req, res) => {
               const start = ev.start.toISOString().split('T')[0];
               const end = ev.end.toISOString().split('T')[0];
               const uid = ev.uid || Math.random().toString(36).substring(2);
+              const refCode = `OTA-${platform.replace(/[^a-zA-Z]/g, '')}-${uid}`.substring(0, 50);
 
               // Check if already imported
-              const existRes = await db.query('SELECT id FROM bookings WHERE "refCode" = $1', [`OTA-${uid}`]);
+              const existRes = await db.query('SELECT id FROM bookings WHERE "refCode" = $1', [refCode]);
               
               if (existRes.rows.length === 0) {
-                // Check overlap to avoid inserting duplicates if they differ by UID
                 const overlapRes = await db.query(`
                   SELECT id FROM bookings
                   WHERE "roomId" = $1 
@@ -74,10 +87,14 @@ router.post('/sync', adminAuth, async (req, res) => {
                 `, [room.id, end, start]);
 
                 if (overlapRes.rows.length === 0) {
-                  // Insert external booking
                   await db.query(
                     'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", amount, status, "refCode", "guestDetails") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                    [1, room.id, start, end, 0, 'external', `OTA-${uid}`, JSON.stringify({ note: ev.summary || 'OTA Import' })]
+                    [1, room.id, start, end, 0, 'external', refCode, 
+                     JSON.stringify({ 
+                       note: ev.summary || 'OTA Import', 
+                       platform: platform,
+                       source: platform
+                     })]
                   );
                   importedCount++;
                 }
@@ -85,8 +102,7 @@ router.post('/sync', adminAuth, async (req, res) => {
             }
           }
         } catch (e) {
-          console.error(`Error syncing link ${link}:`, e);
-          // continue syncing other links
+          console.error(`Error syncing ${platform} link:`, e.message);
         }
       }
     }
