@@ -18,7 +18,7 @@ function Booking() {
   });
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/rooms/${roomId}`)
+    axios.get(`/api/rooms/${roomId}`)
       .then(res => {
         setRoom(res.data);
         setLoading(false);
@@ -43,7 +43,7 @@ function Booking() {
       return;
     }
     
-    axios.post('http://localhost:5000/api/bookings', {
+    axios.post('/api/bookings', {
       roomId,
       checkIn: formData.checkIn,
       checkOut: formData.checkOut,

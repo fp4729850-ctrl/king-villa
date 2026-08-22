@@ -7,7 +7,7 @@ function Home() {
   const [rooms, setRooms] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/rooms')
+    axios.get('/api/rooms')
       .then(res => setRooms(res.data.slice(0, 4)))
       .catch(err => console.error(err));
   }, []);

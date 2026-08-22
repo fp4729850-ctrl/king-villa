@@ -37,7 +37,7 @@ function Receipt() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/bookings/ref/${ref}`, {
+    axios.get(`/api/bookings/ref/${ref}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => {

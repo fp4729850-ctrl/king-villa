@@ -8,7 +8,7 @@ function Rooms() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/rooms')
+    axios.get('/api/rooms')
       .then(res => {
         setRooms(res.data);
         setLoading(false);

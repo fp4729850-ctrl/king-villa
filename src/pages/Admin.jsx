@@ -19,7 +19,7 @@ function Admin() {
   }, []);
 
   const fetchBookings = (token) => {
-    axios.get('http://localhost:5000/api/bookings', {
+    axios.get('/api/bookings', {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {
@@ -33,7 +33,7 @@ function Admin() {
   }
 
   const updateStatus = (id, status) => {
-    axios.put(`http://localhost:5000/api/bookings/${id}/status`, { status }, {
+    axios.put(`/api/bookings/${id}/status`, { status }, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
     .then(() => {

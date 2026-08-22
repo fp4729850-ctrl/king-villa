@@ -13,7 +13,7 @@ function MyBookings() {
       return;
     }
 
-    axios.get('http://localhost:5000/api/bookings/my', {
+    axios.get('/api/bookings/my', {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {

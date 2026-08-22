@@ -10,7 +10,7 @@ function Payment() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/settings')
+    axios.get('/api/settings')
       .then(res => setSettings(res.data))
       .catch(err => console.error(err));
   }, []);
@@ -23,7 +23,7 @@ function Payment() {
     const formData = new FormData();
     formData.append('paymentProof', file);
 
-    axios.post(`http://localhost:5000/api/bookings/${bookingId}/payment`, formData, {
+    axios.post(`/api/bookings/${bookingId}/payment`, formData, {
       headers: { 
         'Content-Type': 'multipart/form-data',
         Authorization: `Bearer ${localStorage.getItem('token')}` 

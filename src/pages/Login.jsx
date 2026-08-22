@@ -9,7 +9,7 @@ function Login() {
     e.preventDefault();
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
     
-    axios.post(`http://localhost:5000${endpoint}`, formData)
+    axios.post(endpoint, formData)
       .then(res => {
         if(res.data.token) {
           localStorage.setItem('token', res.data.token);
