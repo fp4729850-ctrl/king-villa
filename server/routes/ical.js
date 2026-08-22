@@ -46,10 +46,11 @@ router.post('/sync', adminAuth, async (req, res) => {
     let importedCount = 0;
 
     for (const room of roomsRes.rows) {
-      const links = JSON.parse(room.icalLinks || '[]');
-      if (links.length === 0) continue;
+      const linksData = JSON.parse(room.icalLinks || '{}');
+      const linkUrls = Array.isArray(linksData) ? linksData : Object.values(linksData).filter(l => l && l.trim() !== '');
+      if (linkUrls.length === 0) continue;
 
-      for (const link of links) {
+      for (const link of linkUrls) {
         try {
           const events = await ical.async.fromURL(link);
           

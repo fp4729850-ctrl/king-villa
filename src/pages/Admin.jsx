@@ -102,9 +102,8 @@ function Admin() {
     });
   }
 
-  const handleIcalSave = (roomId, linksString) => {
-    const links = linksString.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
-    axios.put(`/api/ical/room/${roomId}/links`, { links }, {
+  const handleIcalSave = (roomId, linksObj) => {
+    axios.put(`/api/ical/room/${roomId}/links`, { links: linksObj }, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
     .then(() => alert('iCal links saved successfully!'))
@@ -182,24 +181,34 @@ function Admin() {
 
         <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
           {rooms.map(room => {
-            const currentLinks = (JSON.parse(room.icalLinks || '[]')).join('\n');
+            const currentLinks = JSON.parse(room.icalLinks || '{}');
+            const linksObj = Array.isArray(currentLinks) ? {} : currentLinks;
             const exportUrl = `${window.location.origin}/api/ical/export/${room.id}`;
+            
             return (
               <div key={room.id} style={{background: '#222', padding: '1.5rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '2rem'}}>
                 <div style={{flex: '1 1 300px'}}>
                   <h4 style={{marginBottom: '0.5rem'}}>{room.name}</h4>
                   <p style={{fontSize: '0.85rem', marginBottom: '0.5rem', color: '#4fc3f7'}}>Export Link (Paste in Airbnb/Booking):</p>
-                  <input type="text" readOnly value={exportUrl} onClick={(e) => {e.target.select(); navigator.clipboard.writeText(exportUrl); alert('Link copied!');}} style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px'}} />
+                  <input type="text" readOnly value={exportUrl} onClick={(e) => {e.target.select(); navigator.clipboard.writeText(exportUrl); alert('Link copied!');}} style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px', marginBottom: '1rem'}} />
                 </div>
                 <div style={{flex: '1 1 300px'}}>
-                  <p style={{fontSize: '0.85rem', marginBottom: '0.5rem', color: '#ffb300'}}>Import iCal Links (from Airbnb/Booking):</p>
-                  <textarea 
-                    defaultValue={currentLinks} 
-                    onBlur={(e) => handleIcalSave(room.id, e.target.value)}
-                    placeholder="Paste iCal links here (one per line)..."
-                    style={{width: '100%', height: '80px', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}}
-                  />
-                  <small style={{color: '#888'}}>Click outside box to save.</small>
+                  <p style={{fontSize: '0.85rem', marginBottom: '0.5rem', color: '#ffb300'}}>Import iCal Links (from OTAs):</p>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    handleIcalSave(room.id, {
+                      airbnb: e.target.airbnb.value,
+                      booking: e.target.booking.value,
+                      agoda: e.target.agoda.value,
+                      goibibo: e.target.goibibo.value
+                    });
+                  }} style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                    <input name="airbnb" defaultValue={linksObj.airbnb || ''} placeholder="Airbnb iCal Link" style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}} />
+                    <input name="booking" defaultValue={linksObj.booking || ''} placeholder="Booking.com iCal Link" style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}} />
+                    <input name="agoda" defaultValue={linksObj.agoda || ''} placeholder="Agoda iCal Link" style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}} />
+                    <input name="goibibo" defaultValue={linksObj.goibibo || ''} placeholder="Goibibo/MakeMyTrip iCal Link" style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}} />
+                    <button type="submit" className="btn btn-primary" style={{marginTop: '0.5rem', padding: '0.5rem'}}>Save Links for {room.name}</button>
+                  </form>
                 </div>
               </div>
             );
