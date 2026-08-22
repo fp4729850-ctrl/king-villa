@@ -85,6 +85,31 @@ router.get('/my', auth, async (req, res) => {
   }
 });
 
+// Cancel booking request (User)
+router.post('/:id/cancel', auth, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ error: 'Reason is required' });
+    
+    // Get existing booking to update guestDetails JSON
+    const bookingRes = await db.query('SELECT * FROM bookings WHERE id = $1 AND "userId" = $2', [req.params.id, req.user.id]);
+    if (bookingRes.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+    
+    const booking = bookingRes.rows[0];
+    const guestDetails = JSON.parse(booking.guestDetails || '{}');
+    guestDetails.cancelReason = reason;
+    
+    await db.query(
+      'UPDATE bookings SET status = $1, "guestDetails" = $2 WHERE id = $3 AND "userId" = $4',
+      ['cancel_request', JSON.stringify(guestDetails), req.params.id, req.user.id]
+    );
+    
+    res.json({ message: 'Cancellation request submitted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin: get all bookings
 router.get('/', adminAuth, async (req, res) => {
   try {

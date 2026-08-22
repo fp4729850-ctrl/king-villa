@@ -165,7 +165,16 @@ function Admin() {
                         : <a href={`http://localhost:5000${b.paymentProof}`} target="_blank" rel="noreferrer" style={{color: '#4fc3f7'}}>View</a>
                     ) : 'None'}
                   </td>
-                  <td style={{padding: '1rem', fontWeight: 'bold'}}>{b.status}</td>
+                  <td style={{padding: '1rem', fontWeight: 'bold'}}>
+                    <span style={{color: b.status === 'cancel_request' ? '#ff9800' : (b.status === 'cancelled' ? '#ff5252' : '#fff')}}>
+                      {b.status}
+                    </span>
+                    {b.status === 'cancel_request' && (
+                      <div style={{fontSize: '0.8rem', marginTop: '0.5rem', color: '#ff9800', background: 'rgba(255, 152, 0, 0.1)', padding: '0.5rem', borderRadius: '4px'}}>
+                        <strong>Reason:</strong> {b.guestDetails?.cancelReason || 'No reason provided'}
+                      </div>
+                    )}
+                  </td>
                   <td style={{padding: '1rem'}}>
                     <select 
                       value={b.status} 
