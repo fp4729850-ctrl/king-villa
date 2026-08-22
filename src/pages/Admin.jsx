@@ -126,6 +126,31 @@ function Admin() {
     });
   };
 
+  const [directBooking, setDirectBooking] = useState({
+    roomId: '', checkIn: '', checkOut: '', guestName: '', guestPhone: '', guestCount: 1, amount: '', paymentType: 'cash'
+  });
+  const [directLoading, setDirectLoading] = useState(false);
+  const [showDirectForm, setShowDirectForm] = useState(false);
+
+  const handleDirectBooking = (e) => {
+    e.preventDefault();
+    setDirectLoading(true);
+    axios.post('/api/bookings/admin-direct', directBooking, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => {
+      alert(`✅ Booking Created!\nRef Code: ${res.data.refCode}`);
+      setDirectBooking({ roomId: '', checkIn: '', checkOut: '', guestName: '', guestPhone: '', guestCount: 1, amount: '', paymentType: 'cash' });
+      setShowDirectForm(false);
+      setDirectLoading(false);
+      fetchBookings(localStorage.getItem('token'));
+    })
+    .catch(err => {
+      alert(err.response?.data?.error || 'Booking failed');
+      setDirectLoading(false);
+    });
+  };
+
   if (loading) return <div className="rooms-section text-center" style={{paddingTop: '8rem'}}>Loading...</div>;
 
   return (
@@ -133,6 +158,69 @@ function Admin() {
       <div className="section-header">
         <h3 className="section-subtitle">DASHBOARD</h3>
         <h2 className="section-title">Admin Management</h2>
+      </div>
+
+      {/* Direct Booking for Walk-in */}
+      <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+          <h3 style={{color: '#4caf50'}}>🏠 Direct Booking (Walk-in Customer)</h3>
+          <button onClick={() => setShowDirectForm(!showDirectForm)} className="btn btn-primary" style={{padding: '0.5rem 1.5rem', background: '#4caf50'}}>
+            {showDirectForm ? 'Close Form' : '+ New Walk-in Booking'}
+          </button>
+        </div>
+        
+        {showDirectForm && (
+          <form onSubmit={handleDirectBooking} style={{display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem'}}>
+            <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+              <div style={{flex: '1 1 200px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Select Room</label>
+                <select required value={directBooking.roomId} onChange={e => setDirectBooking({...directBooking, roomId: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}}>
+                  <option value="">-- Choose Room --</option>
+                  {rooms.map(r => (
+                    <option key={r.id} value={r.id}>{r.name} - ₹{r.price}/night</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{flex: '1 1 200px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Guest Name</label>
+                <input type="text" required value={directBooking.guestName} onChange={e => setDirectBooking({...directBooking, guestName: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex: '1 1 200px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Phone</label>
+                <input type="tel" required value={directBooking.guestPhone} onChange={e => setDirectBooking({...directBooking, guestPhone: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+            </div>
+            <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+              <div style={{flex: '1 1 150px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Check In</label>
+                <input type="date" required value={directBooking.checkIn} onChange={e => setDirectBooking({...directBooking, checkIn: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex: '1 1 150px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Check Out</label>
+                <input type="date" required value={directBooking.checkOut} onChange={e => setDirectBooking({...directBooking, checkOut: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex: '1 1 100px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Guests</label>
+                <input type="number" min="1" required value={directBooking.guestCount} onChange={e => setDirectBooking({...directBooking, guestCount: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex: '1 1 150px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Amount Received (₹)</label>
+                <input type="number" min="0" required value={directBooking.amount} onChange={e => setDirectBooking({...directBooking, amount: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex: '1 1 150px'}}>
+                <label style={{display: 'block', marginBottom: '0.5rem'}}>Payment Mode</label>
+                <select value={directBooking.paymentType} onChange={e => setDirectBooking({...directBooking, paymentType: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '4px'}}>
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" disabled={directLoading} className="btn btn-primary" style={{background: '#4caf50', marginTop: '0.5rem'}}>
+              {directLoading ? 'Creating...' : '✅ Confirm Walk-in Booking'}
+            </button>
+          </form>
+        )}
       </div>
 
       <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>

@@ -203,4 +203,63 @@ router.get('/ref/:refCode', auth, async (req, res) => {
   }
 });
 
+// Admin: Direct booking for walk-in customers
+router.post('/admin-direct', adminAuth, async (req, res) => {
+  const { roomId, checkIn, checkOut, guestName, guestPhone, guestCount, amount, paymentType } = req.body;
+  const refCode = 'WI-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  try {
+    // Check if the requested room is Entire Villa
+    const roomRes = await db.query('SELECT "isEntireVilla" FROM rooms WHERE id = $1', [roomId]);
+    const isEntireVilla = roomRes.rows[0]?.isEntireVilla;
+
+    let overlapQuery;
+    let queryParams;
+    
+    if (isEntireVilla) {
+       overlapQuery = `
+         SELECT id FROM bookings
+         WHERE status IN ('paid', 'confirmed', 'cancel_request', 'external')
+         AND ("checkIn" < $1 AND "checkOut" > $2)
+       `;
+       queryParams = [checkOut, checkIn];
+    } else {
+       overlapQuery = `
+         SELECT b.id FROM bookings b
+         JOIN rooms r ON b."roomId" = r.id
+         WHERE (b."roomId" = $1 OR r."isEntireVilla" = true)
+         AND b.status IN ('paid', 'confirmed', 'cancel_request', 'external')
+         AND (b."checkIn" < $2 AND b."checkOut" > $3)
+       `;
+       queryParams = [roomId, checkOut, checkIn];
+    }
+
+    const overlapRes = await db.query(overlapQuery, queryParams);
+    
+    if (overlapRes.rows.length > 0) {
+      return res.status(400).json({ error: 'Room is already booked for these dates' });
+    }
+
+    const guestDetails = {
+      name: guestName,
+      phone: guestPhone,
+      count: guestCount,
+      paymentType: paymentType,
+      totalAmount: amount,
+      advancePaid: amount,
+      balanceAmount: 0,
+      source: 'Walk-in (Admin)'
+    };
+
+    const insertRes = await db.query(
+      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode", status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [1, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode, 'confirmed']
+    );
+    
+    res.status(201).json({ message: 'Walk-in booking created', bookingId: insertRes.rows[0].id, refCode });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
