@@ -1,0 +1,133 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+function Booking() {
+  const { roomId } = useParams();
+  const navigate = useNavigate();
+  const [room, setRoom] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  const [formData, setFormData] = useState({
+    checkIn: '',
+    checkOut: '',
+    guests: 1,
+    name: '',
+    phone: '',
+    paymentType: 'full'
+  });
+
+  useEffect(() => {
+    axios.get(`http://localhost:5000/api/rooms/${roomId}`)
+      .then(res => {
+        setRoom(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [roomId]);
+
+  const advanceAmount = parseInt(roomId) === 1 ? 2000 : 600;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const total = room.price; 
+    const amountToPay = formData.paymentType === 'advance' ? advanceAmount : total;
+    
+    const token = localStorage.getItem('token');
+    if(!token) {
+      alert("Please login first! Redirecting to login...");
+      window.location.href = '/login';
+      return;
+    }
+    
+    axios.post('http://localhost:5000/api/bookings', {
+      roomId,
+      checkIn: formData.checkIn,
+      checkOut: formData.checkOut,
+      guestDetails: { 
+        name: formData.name, 
+        phone: formData.phone, 
+        count: formData.guests,
+        paymentType: formData.paymentType,
+        totalAmount: total,
+        advancePaid: formData.paymentType === 'advance' ? advanceAmount : total,
+        balanceAmount: formData.paymentType === 'advance' ? (total - advanceAmount) : 0
+      },
+      amount: amountToPay
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => {
+      navigate(`/payment/${res.data.bookingId}`);
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error creating booking');
+    });
+  };
+
+  if (loading) return <div className="rooms-section text-center" style={{paddingTop: '8rem'}}>Loading room details...</div>;
+  if (!room) return <div className="rooms-section text-center" style={{paddingTop: '8rem'}}>Room not found</div>;
+
+  return (
+    <section className="rooms-section" style={{paddingTop: '8rem', minHeight: '100vh'}}>
+      <div className="section-header">
+        <h3 className="section-subtitle">RESERVATION</h3>
+        <h2 className="section-title">Book {room.name}</h2>
+      </div>
+
+      <div style={{maxWidth: '600px', margin: '0 auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
+        <h3 style={{marginBottom: '1rem'}}>{room.name} - ₹{room.price}/night</h3>
+        <p style={{color: 'var(--text-muted)', marginBottom: '2rem'}}>{room.description}</p>
+        
+        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>Full Name</label>
+            <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+          </div>
+          <div>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>Phone</label>
+            <input type="tel" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+          </div>
+          <div style={{display: 'flex', gap: '1rem'}}>
+            <div style={{flex: 1}}>
+              <label style={{display: 'block', marginBottom: '0.5rem'}}>Check In</label>
+              <input type="date" required value={formData.checkIn} onChange={e => setFormData({...formData, checkIn: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+            </div>
+            <div style={{flex: 1}}>
+              <label style={{display: 'block', marginBottom: '0.5rem'}}>Check Out</label>
+              <input type="date" required value={formData.checkOut} onChange={e => setFormData({...formData, checkOut: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+            </div>
+          </div>
+          <div>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>Guests</label>
+            <input type="number" min="1" max={room.capacity} required value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+          </div>
+
+          <div style={{marginTop: '1rem', padding: '1rem', background: '#222', borderRadius: '4px'}}>
+            <label style={{display: 'block', marginBottom: '1rem', fontWeight: 'bold'}}>Payment Option</label>
+            <div style={{display: 'flex', gap: '2rem'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
+                <input type="radio" name="paymentType" value="full" checked={formData.paymentType === 'full'} onChange={() => setFormData({...formData, paymentType: 'full'})} />
+                Pay Full Amount (₹{room.price})
+              </label>
+              <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
+                <input type="radio" name="paymentType" value="advance" checked={formData.paymentType === 'advance'} onChange={() => setFormData({...formData, paymentType: 'advance'})} />
+                Pay Advance (₹{advanceAmount})
+              </label>
+            </div>
+          </div>
+          
+          <button type="submit" className="btn btn-primary" style={{marginTop: '1rem'}}>
+            Proceed to Payment (₹{formData.paymentType === 'advance' ? advanceAmount : room.price})
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+export default Booking;
