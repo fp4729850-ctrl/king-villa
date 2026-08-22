@@ -17,12 +17,14 @@ const authRoutes = require('./routes/auth').router;
 const roomsRouter = require('./routes/rooms');
 const bookingsRouter = require('./routes/bookings');
 const settingsRouter = require('./routes/settings');
+const icalRouter = require('./routes/ical');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/ical', icalRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'King Villa API is running' });

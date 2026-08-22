@@ -9,6 +9,8 @@ function Admin() {
   const [settings, setSettings] = useState({ upiId: '', qrCode: '' });
   const [qrFile, setQrFile] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -22,7 +24,14 @@ function Admin() {
 
     fetchBookings(token);
     fetchSettings();
+    fetchRooms();
   }, []);
+
+  const fetchRooms = () => {
+    axios.get('/api/rooms')
+      .then(res => setRooms(res.data))
+      .catch(err => console.error(err));
+  };
 
   const fetchBookings = (token) => {
     axios.get('/api/bookings', {
@@ -93,6 +102,31 @@ function Admin() {
     });
   }
 
+  const handleIcalSave = (roomId, linksString) => {
+    const links = linksString.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
+    axios.put(`/api/ical/room/${roomId}/links`, { links }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(() => alert('iCal links saved successfully!'))
+    .catch(err => alert('Error saving iCal links'));
+  };
+
+  const handleSync = () => {
+    setSyncLoading(true);
+    axios.post('/api/ical/sync', {}, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then((res) => {
+      alert(res.data.message);
+      setSyncLoading(false);
+      fetchBookings(localStorage.getItem('token'));
+    })
+    .catch(err => {
+      alert('Sync failed');
+      setSyncLoading(false);
+    });
+  };
+
   if (loading) return <div className="rooms-section text-center" style={{paddingTop: '8rem'}}>Loading...</div>;
 
   return (
@@ -133,6 +167,44 @@ function Admin() {
             {settingsLoading ? 'Saving...' : 'Save Settings'}
           </button>
         </form>
+      </div>
+
+      <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+          <h3 style={{color: 'var(--primary-color)'}}>Channel Manager (OTA Sync)</h3>
+          <button onClick={handleSync} disabled={syncLoading} className="btn btn-primary" style={{padding: '0.5rem 1rem'}}>
+            {syncLoading ? 'Syncing...' : 'Sync Now with OTAs'}
+          </button>
+        </div>
+        <p style={{marginBottom: '2rem', fontSize: '0.9rem', color: '#ccc'}}>
+          Export calendars to lock dates on Airbnb/Booking.com. Import their iCal links here (one per line) to lock dates on this website.
+        </p>
+
+        <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+          {rooms.map(room => {
+            const currentLinks = (JSON.parse(room.icalLinks || '[]')).join('\n');
+            const exportUrl = `${window.location.origin}/api/ical/export/${room.id}`;
+            return (
+              <div key={room.id} style={{background: '#222', padding: '1.5rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '2rem'}}>
+                <div style={{flex: '1 1 300px'}}>
+                  <h4 style={{marginBottom: '0.5rem'}}>{room.name}</h4>
+                  <p style={{fontSize: '0.85rem', marginBottom: '0.5rem', color: '#4fc3f7'}}>Export Link (Paste in Airbnb/Booking):</p>
+                  <input type="text" readOnly value={exportUrl} onClick={(e) => {e.target.select(); navigator.clipboard.writeText(exportUrl); alert('Link copied!');}} style={{width: '100%', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px'}} />
+                </div>
+                <div style={{flex: '1 1 300px'}}>
+                  <p style={{fontSize: '0.85rem', marginBottom: '0.5rem', color: '#ffb300'}}>Import iCal Links (from Airbnb/Booking):</p>
+                  <textarea 
+                    defaultValue={currentLinks} 
+                    onBlur={(e) => handleIcalSave(room.id, e.target.value)}
+                    placeholder="Paste iCal links here (one per line)..."
+                    style={{width: '100%', height: '80px', padding: '0.5rem', background: '#111', color: '#fff', border: '1px solid #333', borderRadius: '4px'}}
+                  />
+                  <small style={{color: '#888'}}>Click outside box to save.</small>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div style={{maxWidth: '1000px', margin: '0 auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>

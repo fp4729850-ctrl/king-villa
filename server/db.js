@@ -73,6 +73,13 @@ const initDB = async () => {
     } catch(err) {
       // column likely already exists, ignore
     }
+    
+    // Migration: add icalLinks column if not exists
+    try {
+      await pool.query('ALTER TABLE rooms ADD COLUMN "icalLinks" TEXT DEFAULT \'[]\'');
+    } catch(err) {
+      // column likely already exists, ignore
+    }
 
     // Seed Entire Villa room if not exists
     const entireVillaRes = await pool.query('SELECT * FROM rooms WHERE "isEntireVilla" = true');
