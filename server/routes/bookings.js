@@ -10,11 +10,11 @@ router.post('/', auth, async (req, res) => {
   const refCode = 'KV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
   try {
-    // Check for overlaps with paid or confirmed bookings
+    // Check for overlaps with paid, confirmed or cancel_request bookings
     const overlapRes = await db.query(`
       SELECT id FROM bookings
       WHERE "roomId" = $1 
-      AND status IN ('paid', 'confirmed')
+      AND status IN ('paid', 'confirmed', 'cancel_request')
       AND ("checkIn" < $2 AND "checkOut" > $3)
     `, [roomId, checkOut, checkIn]);
     
@@ -39,7 +39,7 @@ router.get('/room/:roomId/dates', async (req, res) => {
     const bookingsRes = await db.query(`
       SELECT "checkIn", "checkOut" 
       FROM bookings 
-      WHERE "roomId" = $1 AND status IN ('paid', 'confirmed')
+      WHERE "roomId" = $1 AND status IN ('paid', 'confirmed', 'cancel_request')
     `, [req.params.roomId]);
     res.json(bookingsRes.rows);
   } catch (err) {

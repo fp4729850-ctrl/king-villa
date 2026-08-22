@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       const overlapRes = await db.query(`
         SELECT id FROM bookings
         WHERE "roomId" = $1 
-        AND status IN ('paid', 'confirmed')
+        AND status IN ('paid', 'confirmed', 'cancel_request')
         AND ("checkIn" <= $2 AND "checkOut" > $2)
       `, [room.id, today]);
       
