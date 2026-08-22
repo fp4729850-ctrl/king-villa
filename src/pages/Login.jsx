@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 function Login() {
-  const [formData, setFormData] = useState({ email: 'admin@kingvilla.com', password: 'password123', name: 'Admin' });
+  const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isLogin, setIsLogin] = useState(true);
 
   const handleSubmit = (e) => {
