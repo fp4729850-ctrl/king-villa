@@ -41,6 +41,13 @@ function Rooms() {
               <div style={{marginBottom: '1rem', color: 'var(--primary-color)', fontSize: '0.9rem'}}>
                 Amenities: {room.amenities.join(', ')} | Capacity: {room.capacity}
               </div>
+              
+              {room.isBookedToday && (
+                <div style={{background: 'rgba(255, 0, 0, 0.1)', color: '#ff6b6b', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold'}}>
+                  Currently Booked Today
+                </div>
+              )}
+              
               <Link to={`/booking/${room.id}`} className="btn btn-primary btn-block text-center" style={{ textDecoration: 'none' }}>Book This Room</Link>
             </div>
           </div>

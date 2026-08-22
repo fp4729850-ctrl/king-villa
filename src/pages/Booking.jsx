@@ -7,6 +7,8 @@ function Booking() {
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bookedDates, setBookedDates] = useState([]);
+  const [dateError, setDateError] = useState('');
   
   const [formData, setFormData] = useState({
     checkIn: '',
@@ -21,6 +23,10 @@ function Booking() {
     axios.get(`/api/rooms/${roomId}`)
       .then(res => {
         setRoom(res.data);
+        return axios.get(`/api/bookings/room/${roomId}/dates`);
+      })
+      .then(res => {
+        setBookedDates(res.data);
         setLoading(false);
       })
       .catch(err => {
@@ -29,10 +35,36 @@ function Booking() {
       });
   }, [roomId]);
 
+  useEffect(() => {
+    if (formData.checkIn && formData.checkOut) {
+      const start = new Date(formData.checkIn);
+      const end = new Date(formData.checkOut);
+      
+      if (start >= end) {
+        setDateError('Check-out must be after check-in.');
+        return;
+      }
+      
+      const overlap = bookedDates.some(b => {
+        const bStart = new Date(b.checkIn);
+        const bEnd = new Date(b.checkOut);
+        return (start < bEnd && end > bStart);
+      });
+      
+      if (overlap) {
+        setDateError('Sorry, this room is already booked for these dates.');
+      } else {
+        setDateError('');
+      }
+    }
+  }, [formData.checkIn, formData.checkOut, bookedDates]);
+
   const advanceAmount = parseInt(roomId) === 1 ? 2000 : 600;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (dateError) return;
+    
     const total = room.price; 
     const amountToPay = formData.paymentType === 'advance' ? advanceAmount : total;
     
@@ -65,7 +97,7 @@ function Booking() {
     })
     .catch(err => {
       console.error(err);
-      alert('Error creating booking');
+      alert(err.response?.data?.error || 'Error creating booking');
     });
   };
 
@@ -106,6 +138,12 @@ function Booking() {
             <label style={{display: 'block', marginBottom: '0.5rem'}}>Guests</label>
             <input type="number" min="1" max={room.capacity} required value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
           </div>
+
+          {dateError && (
+            <div style={{color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)', padding: '1rem', borderRadius: '4px', border: '1px solid #ff6b6b'}}>
+              {dateError}
+            </div>
+          )}
 
           <div style={{marginTop: '1rem', padding: '1rem', background: '#222', borderRadius: '4px'}}>
             <label style={{display: 'block', marginBottom: '1rem', fontWeight: 'bold'}}>Payment Option</label>

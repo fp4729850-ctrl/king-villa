@@ -10,12 +10,38 @@ router.post('/', auth, async (req, res) => {
   const refCode = 'KV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
   try {
+    // Check for overlaps with paid or confirmed bookings
+    const overlapRes = await db.query(`
+      SELECT id FROM bookings
+      WHERE "roomId" = $1 
+      AND status IN ('paid', 'confirmed')
+      AND ("checkIn" < $2 AND "checkOut" > $3)
+    `, [roomId, checkOut, checkIn]);
+    
+    if (overlapRes.rows.length > 0) {
+      return res.status(400).json({ error: 'Room is already booked for these dates' });
+    }
+
     const insertRes = await db.query(
       'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
       [userId, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode]
     );
     
     res.status(201).json({ message: 'Booking created', bookingId: insertRes.rows[0].id, refCode });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get booked dates for a room
+router.get('/room/:roomId/dates', async (req, res) => {
+  try {
+    const bookingsRes = await db.query(`
+      SELECT "checkIn", "checkOut" 
+      FROM bookings 
+      WHERE "roomId" = $1 AND status IN ('paid', 'confirmed')
+    `, [req.params.roomId]);
+    res.json(bookingsRes.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -5,12 +5,25 @@ const { adminAuth } = require('./auth');
 
 router.get('/', async (req, res) => {
   try {
-    const roomsRes = await db.query('SELECT * FROM rooms');
+    const roomsRes = await db.query('SELECT * FROM rooms ORDER BY id ASC');
     const rooms = roomsRes.rows;
-    rooms.forEach(r => {
-      r.amenities = JSON.parse(r.amenities || '[]');
-      r.images = JSON.parse(r.images || '[]');
-    });
+    
+    const today = new Date().toISOString().split('T')[0];
+
+    for (let room of rooms) {
+      room.amenities = JSON.parse(room.amenities || '[]');
+      room.images = JSON.parse(room.images || '[]');
+      
+      const overlapRes = await db.query(`
+        SELECT id FROM bookings
+        WHERE "roomId" = $1 
+        AND status IN ('paid', 'confirmed')
+        AND ("checkIn" <= $2 AND "checkOut" > $2)
+      `, [room.id, today]);
+      
+      room.isBookedToday = overlapRes.rows.length > 0;
+    }
+    
     res.json(rooms);
   } catch (err) {
     res.status(500).json({ error: err.message });
