@@ -6,12 +6,12 @@ const db = require('../db');
 
 const JWT_SECRET = 'supersecretkey_change_me_in_prod';
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
   
   try {
-    const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (existing) {
+    const existing = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Email already exists' });
     }
 
@@ -19,26 +19,29 @@ router.post('/register', (req, res) => {
     const hash = bcrypt.hashSync(password, salt);
 
     // Make the first user an admin by default
-    const count = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-    const role = count === 0 ? 'admin' : 'user';
+    const countRes = await db.query('SELECT COUNT(*) as count FROM users');
+    const role = parseInt(countRes.rows[0].count) === 0 ? 'admin' : 'user';
 
-    const insert = db.prepare('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)');
-    const result = insert.run(name, email, hash, role);
+    const insertRes = await db.query(
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+      [name, email, hash, role]
+    );
 
-    res.status(201).json({ message: 'User registered successfully', userId: result.lastInsertRowid });
+    res.status(201).json({ message: 'User registered successfully', userId: insertRes.rows[0].id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (!user) {
+    const userRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userRes.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
+    const user = userRes.rows[0];
 
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {

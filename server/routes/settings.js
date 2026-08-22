@@ -3,25 +3,29 @@ const router = express.Router();
 const db = require('../db');
 const { adminAuth } = require('./auth');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    let settings = db.prepare('SELECT * FROM siteSettings LIMIT 1').get();
-    if (!settings) {
-      const insert = db.prepare('INSERT INTO siteSettings (qrCode, upiId, contactEmail, contactPhone) VALUES (?, ?, ?, ?)');
-      insert.run('', 'kingvilla@upi', 'hello@kingvilla.com', '+91 9876543210');
-      settings = db.prepare('SELECT * FROM siteSettings LIMIT 1').get();
+    let settingsRes = await db.query('SELECT * FROM "siteSettings" LIMIT 1');
+    if (settingsRes.rows.length === 0) {
+      await db.query(
+        'INSERT INTO "siteSettings" ("qrCode", "upiId", "contactEmail", "contactPhone") VALUES ($1, $2, $3, $4)',
+        ['', 'kingvilla@upi', 'hello@kingvilla.com', '+91 9876543210']
+      );
+      settingsRes = await db.query('SELECT * FROM "siteSettings" LIMIT 1');
     }
-    res.json(settings);
+    res.json(settingsRes.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.put('/', adminAuth, (req, res) => {
+router.put('/', adminAuth, async (req, res) => {
   const { qrCode, upiId, contactEmail, contactPhone } = req.body;
   try {
-    const update = db.prepare('UPDATE siteSettings SET qrCode = ?, upiId = ?, contactEmail = ?, contactPhone = ? WHERE id = (SELECT id FROM siteSettings LIMIT 1)');
-    update.run(qrCode, upiId, contactEmail, contactPhone);
+    await db.query(
+      'UPDATE "siteSettings" SET "qrCode" = $1, "upiId" = $2, "contactEmail" = $3, "contactPhone" = $4 WHERE id = (SELECT id FROM "siteSettings" LIMIT 1)',
+      [qrCode, upiId, contactEmail, contactPhone]
+    );
     res.json({ message: 'Settings updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });

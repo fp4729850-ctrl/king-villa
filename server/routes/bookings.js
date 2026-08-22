@@ -17,29 +17,33 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Create booking
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   const { roomId, checkIn, checkOut, guestDetails, amount } = req.body;
   const userId = req.user.id;
   const refCode = 'KV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
   try {
-    const insert = db.prepare('INSERT INTO bookings (userId, roomId, checkIn, checkOut, guestDetails, amount, refCode) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const result = insert.run(userId, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode);
+    const insertRes = await db.query(
+      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      [userId, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode]
+    );
     
-    res.status(201).json({ message: 'Booking created', bookingId: result.lastInsertRowid, refCode });
+    res.status(201).json({ message: 'Booking created', bookingId: insertRes.rows[0].id, refCode });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // Upload payment proof
-router.post('/:id/payment', auth, upload.single('paymentProof'), (req, res) => {
+router.post('/:id/payment', auth, upload.single('paymentProof'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
     const filePath = '/uploads/' + req.file.filename;
-    const update = db.prepare('UPDATE bookings SET paymentProof = ?, status = ? WHERE id = ? AND userId = ?');
-    update.run(filePath, 'paid', req.params.id, req.user.id);
+    await db.query(
+      'UPDATE bookings SET "paymentProof" = $1, status = $2 WHERE id = $3 AND "userId" = $4',
+      [filePath, 'paid', req.params.id, req.user.id]
+    );
     
     res.json({ message: 'Payment proof uploaded', paymentProof: filePath });
   } catch (err) {
@@ -48,16 +52,17 @@ router.post('/:id/payment', auth, upload.single('paymentProof'), (req, res) => {
 });
 
 // Get user bookings
-router.get('/my', auth, (req, res) => {
+router.get('/my', auth, async (req, res) => {
   try {
-    const bookings = db.prepare(`
-      SELECT b.*, r.name as roomName 
+    const bookingsRes = await db.query(`
+      SELECT b.*, r.name as "roomName" 
       FROM bookings b 
-      JOIN rooms r ON b.roomId = r.id 
-      WHERE b.userId = ?
+      JOIN rooms r ON b."roomId" = r.id 
+      WHERE b."userId" = $1
       ORDER BY b.id DESC
-    `).all(req.user.id);
+    `, [req.user.id]);
     
+    const bookings = bookingsRes.rows;
     bookings.forEach(b => b.guestDetails = JSON.parse(b.guestDetails || '{}'));
     res.json(bookings);
   } catch (err) {
@@ -66,16 +71,17 @@ router.get('/my', auth, (req, res) => {
 });
 
 // Admin: get all bookings
-router.get('/', adminAuth, (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
-    const bookings = db.prepare(`
-      SELECT b.*, r.name as roomName, u.name as userName, u.email as userEmail
+    const bookingsRes = await db.query(`
+      SELECT b.*, r.name as "roomName", u.name as "userName", u.email as "userEmail"
       FROM bookings b 
-      JOIN rooms r ON b.roomId = r.id 
-      JOIN users u ON b.userId = u.id
+      JOIN rooms r ON b."roomId" = r.id 
+      JOIN users u ON b."userId" = u.id
       ORDER BY b.id DESC
-    `).all();
+    `);
     
+    const bookings = bookingsRes.rows;
     bookings.forEach(b => b.guestDetails = JSON.parse(b.guestDetails || '{}'));
     res.json(bookings);
   } catch (err) {
@@ -84,11 +90,10 @@ router.get('/', adminAuth, (req, res) => {
 });
 
 // Admin: update status
-router.put('/:id/status', adminAuth, (req, res) => {
+router.put('/:id/status', adminAuth, async (req, res) => {
   const { status } = req.body;
   try {
-    const update = db.prepare('UPDATE bookings SET status = ? WHERE id = ?');
-    update.run(status, req.params.id);
+    await db.query('UPDATE bookings SET status = $1 WHERE id = $2', [status, req.params.id]);
     res.json({ message: 'Status updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -96,17 +101,19 @@ router.put('/:id/status', adminAuth, (req, res) => {
 });
 
 // Get by ref (for receipt)
-router.get('/ref/:refCode', auth, (req, res) => {
+router.get('/ref/:refCode', auth, async (req, res) => {
   try {
-    const booking = db.prepare(`
-      SELECT b.*, r.name as roomName, r.price, u.name as userName 
+    const bookingRes = await db.query(`
+      SELECT b.*, r.name as "roomName", r.price, u.name as "userName" 
       FROM bookings b 
-      JOIN rooms r ON b.roomId = r.id 
-      JOIN users u ON b.userId = u.id
-      WHERE b.refCode = ?
-    `).get(req.params.refCode);
+      JOIN rooms r ON b."roomId" = r.id 
+      JOIN users u ON b."userId" = u.id
+      WHERE b."refCode" = $1
+    `, [req.params.refCode]);
     
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (bookingRes.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+    
+    const booking = bookingRes.rows[0];
     
     // Check ownership unless admin
     if (booking.userId !== req.user.id && req.user.role !== 'admin') {
