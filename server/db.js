@@ -55,9 +55,9 @@ const initDB = async () => {
     if (parseInt(res.rows[0].count) === 0) {
       const defaultRooms = [
         { name: 'Room Number 1', desc: 'The pinnacle of luxury — king bed, private balcony, and panoramic views. (Capacity: 2 on bed + 3 extra beds)', price: 2500, capacity: 5, amenities: ['WiFi', 'AC', 'TV', 'Private Balcony', 'Coffee Maker'] },
-        { name: 'Room Number 2', desc: 'Regal interiors with plush furnishings and an en-suite luxury bathroom.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV'] },
-        { name: 'Room Number 3', desc: 'Serene garden-facing room with natural light and elegant decor.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV'] },
-        { name: 'Room Number 4', desc: 'Wake up steps away from the private pool with breathtaking views.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV'] },
+        { name: 'Room Number 2', desc: 'Regal interiors with plush furnishings and an en-suite luxury bathroom.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
+        { name: 'Room Number 3', desc: 'Serene garden-facing room with natural light and elegant decor.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
+        { name: 'Room Number 4', desc: 'Wake up steps away from the private pool with breathtaking views.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
       ];
       for (const r of defaultRooms) {
         await pool.query(
