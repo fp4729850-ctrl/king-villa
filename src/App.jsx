@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Rooms from './pages/Rooms';
 import Booking from './pages/Booking';
@@ -9,6 +9,32 @@ import MyBookings from './pages/MyBookings';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import './index.css';
+
+const MobileNav = () => {
+  const location = useLocation();
+  const path = location.pathname;
+  
+  return (
+    <div className="mobile-bottom-nav no-print">
+      <Link to="/" className={`mobile-nav-item ${path === '/' ? 'active' : ''}`}>
+        <span className="mobile-nav-icon">🏠</span>
+        <span>Home</span>
+      </Link>
+      <Link to="/rooms" className={`mobile-nav-item ${path.startsWith('/rooms') || path.startsWith('/booking') ? 'active' : ''}`}>
+        <span className="mobile-nav-icon">🛏️</span>
+        <span>Rooms</span>
+      </Link>
+      <Link to="/my-bookings" className={`mobile-nav-item ${path === '/my-bookings' ? 'active' : ''}`}>
+        <span className="mobile-nav-icon">📅</span>
+        <span>Bookings</span>
+      </Link>
+      <Link to="/admin" className={`mobile-nav-item ${path === '/admin' ? 'active' : ''}`}>
+        <span className="mobile-nav-icon">⚙️</span>
+        <span>Admin</span>
+      </Link>
+    </div>
+  );
+};
 
 function App() {
   return (
@@ -71,6 +97,8 @@ function App() {
             </div>
           </div>
         </footer>
+        
+        <MobileNav />
       </div>
     </Router>
   );
