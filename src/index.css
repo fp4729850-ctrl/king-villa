@@ -125,7 +125,10 @@ body {
   position: relative;
   min-height: 100vh;
   padding: 0 2rem;
-  background: radial-gradient(circle at center, #2a2211 0%, #0a0a0a 100%);
+  background-image: url('/hero-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .hero-overlay {
