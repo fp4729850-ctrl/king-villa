@@ -40,15 +40,36 @@ function App() {
 
         <footer style={{
           textAlign: 'center', 
-          padding: '2rem', 
+          padding: '2rem 1rem', 
           marginTop: 'auto', 
           background: '#111', 
           borderTop: '1px solid #333',
           color: '#ccc',
           fontSize: '0.9rem'
         }}>
-          <p style={{marginBottom: '0.5rem'}}>👑 <strong>King Villa</strong></p>
-          <p>Contact us: <a href="tel:+919574090292" style={{color: 'var(--primary-color)', textDecoration: 'none'}}>+91 9574090292</a></p>
+          <div style={{maxWidth: '800px', margin: '0 auto'}}>
+            <p style={{marginBottom: '0.5rem', fontSize: '1.1rem', color: 'var(--primary-color)'}}>👑 <strong>King Villa</strong></p>
+            <p style={{marginBottom: '0.5rem'}}>
+              <strong>Address:</strong> Devka Daman Road, Devka Beach, Village Marwad, Near Marwad Panchayat, Nani Daman, Daman
+            </p>
+            <p style={{marginBottom: '1.5rem'}}>
+              <strong>Contact:</strong> <a href="tel:+919574090292" style={{color: '#fff', textDecoration: 'none'}}>+91 9574090292</a>
+            </p>
+            
+            {/* Google Maps Embed */}
+            <div style={{width: '100%', overflow: 'hidden', borderRadius: '8px', border: '1px solid #333'}}>
+              <iframe 
+                src="https://maps.google.com/maps?q=Devka%20Beach,%20Marwad,%20Nani%20Daman,%20Daman&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                width="100%" 
+                height="300" 
+                style={{border: 0, display: 'block'}} 
+                allowFullScreen="" 
+                loading="lazy" 
+                referrerPolicy="no-referrer-when-downgrade"
+                title="King Villa Location"
+              ></iframe>
+            </div>
+          </div>
         </footer>
       </div>
     </Router>
