@@ -59,7 +59,7 @@ function App() {
             {/* Google Maps Embed */}
             <div style={{width: '100%', overflow: 'hidden', borderRadius: '8px', border: '1px solid #333'}}>
               <iframe 
-                src="https://maps.google.com/maps?q=Devka%20Beach,%20Marwad,%20Nani%20Daman,%20Daman&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                src="https://maps.google.com/maps?q=King%20Villa,%20Daman&t=&z=15&ie=UTF8&iwloc=&output=embed" 
                 width="100%" 
                 height="300" 
                 style={{border: 0, display: 'block'}} 
