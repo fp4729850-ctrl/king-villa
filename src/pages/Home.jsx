@@ -20,6 +20,7 @@ function Home() {
   return (
     <>
       <main className="hero">
+        <img src="/hero-bg.jpg" alt="King Villa" className="hero-bg" />
         <p className="hero-desc">
           Experience unparalleled luxury in our exclusive royal rooms. Your private paradise awaits.
         </p>
