@@ -205,7 +205,7 @@ router.get('/ref/:refCode', auth, async (req, res) => {
 
 // Admin: Direct booking for walk-in customers
 router.post('/admin-direct', adminAuth, async (req, res) => {
-  const { roomId, checkIn, checkOut, guestName, guestPhone, guestCount, amount, paymentType } = req.body;
+  const { roomId, checkIn, checkOut, guestName, guestPhone, guestCount, amount, paymentType, aadharCards } = req.body;
   const refCode = 'WI-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
   try {
@@ -252,8 +252,8 @@ router.post('/admin-direct', adminAuth, async (req, res) => {
     };
 
     const insertRes = await db.query(
-      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode", status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-      [1, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode, 'confirmed']
+      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode", status, "aadharCards") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+      [1, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode, 'confirmed', JSON.stringify(aadharCards || [])]
     );
     
     res.status(201).json({ message: 'Walk-in booking created', bookingId: insertRes.rows[0].id, refCode });

@@ -156,7 +156,15 @@ function Admin() {
   };
 
   const [directBooking, setDirectBooking] = useState({
-    roomId: '', checkIn: '', checkOut: '', guestName: '', guestPhone: '', guestCount: 1, amount: '', paymentType: 'cash'
+    roomId: '',
+    guestName: '',
+    guestPhone: '',
+    checkIn: '',
+    checkOut: '',
+    guestCount: 1,
+    amount: 0,
+    paymentType: 'cash',
+    aadharCards: [] // Array to hold base64 images
   });
   const [directLoading, setDirectLoading] = useState(false);
   const [showDirectForm, setShowDirectForm] = useState(false);
@@ -169,7 +177,7 @@ function Admin() {
     })
     .then(res => {
       alert(`✅ Booking Created!\nRef Code: ${res.data.refCode}`);
-      setDirectBooking({ roomId: '', checkIn: '', checkOut: '', guestName: '', guestPhone: '', guestCount: 1, amount: '', paymentType: 'cash' });
+      setDirectBooking({ roomId: '', guestName: '', guestPhone: '', checkIn: '', checkOut: '', guestCount: 1, amount: 0, paymentType: 'cash', aadharCards: [] });
       setShowDirectForm(false);
       setDirectLoading(false);
       fetchBookings(localStorage.getItem('token'));
@@ -178,6 +186,65 @@ function Admin() {
       alert(err.response?.data?.error || 'Booking failed');
       setDirectLoading(false);
     });
+  };
+
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleAadharUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    try {
+      const compressedImages = await Promise.all(files.map(file => compressImage(file)));
+      setDirectBooking(prev => ({
+        ...prev,
+        aadharCards: [...prev.aadharCards, ...compressedImages]
+      }));
+    } catch (err) {
+      console.error("Error compressing image", err);
+      alert("Failed to process image. Please try again.");
+    }
+  };
+
+  const removeAadhar = (index) => {
+    setDirectBooking(prev => ({
+      ...prev,
+      aadharCards: prev.aadharCards.filter((_, i) => i !== index)
+    }));
   };
 
   if (loading) return <div className="rooms-section text-center" style={{paddingTop: '8rem'}}>Loading...</div>;
@@ -245,6 +312,42 @@ function Admin() {
                 </select>
               </div>
             </div>
+
+            <div style={{background: '#2a2a2a', padding: '1rem', borderRadius: '8px', border: '1px solid #444', marginTop: '1rem'}}>
+              <h4 style={{marginBottom: '0.5rem'}}>Upload Aadhar Cards</h4>
+              <p style={{fontSize: '0.85rem', color: '#aaa', marginBottom: '1rem'}}>
+                You can upload multiple images. Use the camera button to take a live photo, or the gallery button to select existing photos.
+              </p>
+              
+              <div style={{display: 'flex', gap: '1rem', marginBottom: '1rem'}}>
+                <label className="btn btn-outline" style={{cursor: 'pointer', flex: 1, textAlign: 'center'}}>
+                  📸 Take Photo (Camera)
+                  <input type="file" accept="image/*" capture="environment" onChange={handleAadharUpload} style={{display: 'none'}} />
+                </label>
+                <label className="btn btn-outline" style={{cursor: 'pointer', flex: 1, textAlign: 'center'}}>
+                  🖼️ Choose from Gallery
+                  <input type="file" accept="image/*" multiple onChange={handleAadharUpload} style={{display: 'none'}} />
+                </label>
+              </div>
+
+              {directBooking.aadharCards.length > 0 && (
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem'}}>
+                  {directBooking.aadharCards.map((base64, index) => (
+                    <div key={index} style={{position: 'relative', width: '100px', height: '100px'}}>
+                      <img src={base64} alt={`Aadhar ${index + 1}`} style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px', border: '1px solid #555'}} />
+                      <button 
+                        type="button" 
+                        onClick={() => removeAadhar(index)} 
+                        style={{position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '0.7rem'}}
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button type="submit" disabled={directLoading} className="btn btn-primary" style={{background: '#4caf50', marginTop: '0.5rem'}}>
               {directLoading ? 'Creating...' : '✅ Confirm Walk-in Booking'}
             </button>
