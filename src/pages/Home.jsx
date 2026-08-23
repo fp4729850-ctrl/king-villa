@@ -21,15 +21,6 @@ function Home() {
     <>
       <main className="hero">
         <div className="hero-overlay"></div>
-        
-        <div className="hero-subtitle">Welcome To</div>
-        
-        <div className="wooden-signboard">
-          <h1 className="hero-title-wood">
-            King Villa
-          </h1>
-        </div>
-
         <p className="hero-desc">
           Experience unparalleled luxury in our exclusive royal rooms. Your private paradise awaits.
         </p>
