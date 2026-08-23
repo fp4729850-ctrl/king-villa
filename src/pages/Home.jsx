@@ -20,11 +20,6 @@ function Home() {
   return (
     <>
       <main className="hero">
-        <img 
-          src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2075&auto=format&fit=crop" 
-          alt="King Villa luxury background" 
-          className="hero-bg"
-        />
         <div className="hero-overlay"></div>
         
         <div className="hero-subtitle">Welcome To</div>
