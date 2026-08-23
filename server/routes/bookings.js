@@ -5,7 +5,7 @@ const { auth, adminAuth } = require('./auth');
 
 // Create booking
 router.post('/', auth, async (req, res) => {
-  const { roomId, checkIn, checkOut, guestDetails, amount } = req.body;
+  const { roomId, checkIn, checkOut, guestDetails, amount, aadharCards } = req.body;
   const userId = req.user.id;
   const refCode = 'KV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   
@@ -44,8 +44,8 @@ router.post('/', auth, async (req, res) => {
     }
 
     const insertRes = await db.query(
-      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [userId, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode]
+      'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", "guestDetails", amount, "refCode", "aadharCards") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [userId, roomId, checkIn, checkOut, JSON.stringify(guestDetails), amount, refCode, JSON.stringify(aadharCards || [])]
     );
     
     res.status(201).json({ message: 'Booking created', bookingId: insertRes.rows[0].id, refCode });

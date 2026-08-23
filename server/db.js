@@ -81,6 +81,13 @@ const initDB = async () => {
       // column likely already exists, ignore
     }
 
+    // Migration: add aadharCards column if not exists
+    try {
+      await pool.query('ALTER TABLE bookings ADD COLUMN "aadharCards" TEXT');
+    } catch(err) {
+      // column likely already exists, ignore
+    }
+
     // Seed Entire Villa room if not exists
     const entireVillaRes = await pool.query('SELECT * FROM rooms WHERE "isEntireVilla" = true');
     if (entireVillaRes.rows.length === 0) {

@@ -15,6 +15,9 @@ function Admin() {
   // User Management State
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  
+  // Aadhar Modal State
+  const [selectedAadhars, setSelectedAadhars] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -436,9 +439,27 @@ function Admin() {
                   <td style={{padding: '1rem'}}>
                     {b.paymentProof ? (
                       b.paymentProof.startsWith('data:image') 
-                        ? <a href={b.paymentProof} target="_blank" rel="noreferrer" style={{color: '#4fc3f7'}}>View</a>
-                        : <a href={`http://localhost:5000${b.paymentProof}`} target="_blank" rel="noreferrer" style={{color: '#4fc3f7'}}>View</a>
+                        ? <a href={b.paymentProof} target="_blank" rel="noreferrer" style={{color: '#4fc3f7'}}>View Proof</a>
+                        : <a href={`http://localhost:5000${b.paymentProof}`} target="_blank" rel="noreferrer" style={{color: '#4fc3f7'}}>View Proof</a>
                     ) : 'None'}
+                    
+                    {b.aadharCards && (
+                      <div style={{marginTop: '0.5rem'}}>
+                        <button 
+                          onClick={() => {
+                            try {
+                              setSelectedAadhars(JSON.parse(b.aadharCards));
+                            } catch(e) {
+                              alert("No valid Aadhar cards found");
+                            }
+                          }}
+                          className="btn"
+                          style={{padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#f57c00', border: 'none', color: '#fff'}}
+                        >
+                          View IDs
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td style={{padding: '1rem', fontWeight: 'bold'}}>
                     <span style={{color: b.status === 'cancel_request' ? '#ff9800' : (b.status === 'cancelled' ? '#ff5252' : '#fff')}}>
@@ -468,6 +489,29 @@ function Admin() {
           </table>
         </div>
       </div>
+
+      {selectedAadhars && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem'}}>
+          <div style={{background: '#222', padding: '2rem', borderRadius: '8px', maxWidth: '800px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative'}}>
+            <button onClick={() => setSelectedAadhars(null)} style={{position: 'absolute', top: '10px', right: '10px', background: 'red', color: 'white', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderRadius: '4px'}}>
+              Close
+            </button>
+            <h3 style={{marginBottom: '1rem'}}>Uploaded Aadhar Cards</h3>
+            {Array.isArray(selectedAadhars) && selectedAadhars.length > 0 ? (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                {selectedAadhars.map((base64Str, i) => (
+                  <div key={i} style={{border: '1px solid #444', padding: '1rem', borderRadius: '4px'}}>
+                    <h4 style={{marginBottom: '0.5rem'}}>Aadhar {i + 1}</h4>
+                    <img src={base64Str} alt={`Aadhar ${i+1}`} style={{maxWidth: '100%', height: 'auto', borderRadius: '4px'}} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No Aadhar cards uploaded for this booking.</p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

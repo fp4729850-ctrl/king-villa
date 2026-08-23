@@ -10,6 +10,7 @@ function Booking() {
   const [bookedDates, setBookedDates] = useState([]);
   const [dateError, setDateError] = useState('');
   const [nights, setNights] = useState(1);
+  const [aadharFiles, setAadharFiles] = useState([]);
   
   const [formData, setFormData] = useState({
     checkIn: '',
@@ -67,10 +68,72 @@ function Booking() {
 
   const totalAmount = (room?.price || 0) * nights;
   const advanceAmount = Math.round(totalAmount * 0.30);
+  
+  const requiredAadhars = parseInt(formData.guests) <= 2 ? parseInt(formData.guests) : (parseInt(formData.guests) <= 4 ? 2 : 3);
+
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Scale down to max 800px width/height to save DB space
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.6 quality (very small size)
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleAadharUpload = async (index, file) => {
+    if (!file) return;
+    try {
+      const compressedBase64 = await compressImage(file);
+      const newFiles = [...aadharFiles];
+      newFiles[index] = compressedBase64;
+      setAadharFiles(newFiles);
+    } catch (err) {
+      console.error("Error compressing image", err);
+      alert("Failed to process image. Please try a different photo.");
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (dateError) return;
+    
+    const validAadhars = aadharFiles.filter(Boolean);
+    if (validAadhars.length < requiredAadhars) {
+      alert(`Please upload all ${requiredAadhars} required Aadhar cards before booking.`);
+      return;
+    }
+
     
     const amountToPay = formData.paymentType === 'advance' ? advanceAmount : totalAmount;
     
@@ -94,6 +157,7 @@ function Booking() {
         advancePaid: amountToPay,
         balanceAmount: totalAmount - amountToPay
       },
+      aadharCards: aadharFiles.filter(Boolean),
       amount: amountToPay
     }, {
       headers: { Authorization: `Bearer ${token}` }
@@ -142,7 +206,36 @@ function Booking() {
           </div>
           <div>
             <label style={{display: 'block', marginBottom: '0.5rem'}}>Guests</label>
-            <input type="number" min="1" max={room.capacity} required value={formData.guests} onChange={e => setFormData({...formData, guests: e.target.value})} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+            <input type="number" min="1" max={room.capacity} required value={formData.guests} onChange={e => {
+              setFormData({...formData, guests: e.target.value});
+              // Reset aadhar files if guest count changes to avoid stale data
+              setAadharFiles([]);
+            }} style={{width: '100%', padding: '0.8rem', background: '#333', border: '1px solid #444', color: '#fff', borderRadius: '4px'}} />
+          </div>
+
+          <div style={{background: '#2a2211', padding: '1rem', borderRadius: '8px', border: '1px solid #c4994d', marginTop: '1rem'}}>
+            <h4 style={{color: '#ffda75', marginBottom: '0.5rem'}}>ID Verification (Required)</h4>
+            <p style={{fontSize: '0.85rem', color: '#ccc', marginBottom: '1rem'}}>
+              For {formData.guests} guest(s), you must upload <strong>{requiredAadhars} Aadhar Card(s)</strong>.
+            </p>
+            
+            {Array.from({ length: requiredAadhars }).map((_, index) => (
+              <div key={index} style={{marginBottom: '1rem'}}>
+                <label style={{display: 'block', fontSize: '0.9rem', marginBottom: '0.3rem'}}>
+                  Aadhar Card {index + 1}
+                </label>
+                <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    required={!aadharFiles[index]}
+                    onChange={(e) => handleAadharUpload(index, e.target.files[0])}
+                    style={{flex: 1, fontSize: '0.85rem'}}
+                  />
+                  {aadharFiles[index] && <span style={{color: '#4caf50', fontSize: '0.8rem'}}>✅ Uploaded</span>}
+                </div>
+              </div>
+            ))}
           </div>
 
           {dateError && (
