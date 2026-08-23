@@ -20,7 +20,6 @@ function Home() {
   return (
     <>
       <main className="hero">
-        <div className="hero-overlay"></div>
         <p className="hero-desc">
           Experience unparalleled luxury in our exclusive royal rooms. Your private paradise awaits.
         </p>
