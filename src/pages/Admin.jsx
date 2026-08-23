@@ -11,6 +11,10 @@ function Admin() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [syncLoading, setSyncLoading] = useState(false);
+  
+  // User Management State
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,6 +29,7 @@ function Admin() {
     fetchBookings(token);
     fetchSettings();
     fetchRooms();
+    fetchUsers(token);
   }, []);
 
   const fetchRooms = () => {
@@ -56,6 +61,27 @@ function Admin() {
       })
       .catch(err => console.error(err));
   }
+
+  const fetchUsers = (token) => {
+    setUsersLoading(true);
+    axios.get('/api/auth/users', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => { setUsers(res.data); setUsersLoading(false); })
+      .catch(err => { console.error(err); setUsersLoading(false); });
+  };
+
+  const handleRoleChange = (userId, newRole) => {
+    if(!window.confirm(`Are you sure you want to make this user an ${newRole.toUpperCase()}?`)) return;
+    axios.put(`/api/auth/users/${userId}/role`, { role: newRole }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => {
+      alert(res.data.message);
+      fetchUsers(localStorage.getItem('token'));
+    })
+    .catch(err => {
+      alert(err.response?.data?.error || 'Failed to update role');
+    });
+  };
 
   const updateStatus = (id, status) => {
     axios.put(`/api/bookings/${id}/status`, { status }, {
@@ -220,6 +246,64 @@ function Admin() {
               {directLoading ? 'Creating...' : '✅ Confirm Walk-in Booking'}
             </button>
           </form>
+        )}
+      </div>
+
+      <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
+        <h3 style={{marginBottom: '1.5rem', color: 'var(--primary-color)'}}>User Management (Admins)</h3>
+        {usersLoading ? <p>Loading users...</p> : (
+          <div style={{overflowX: 'auto'}}>
+            <table style={{width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.9rem'}}>
+              <thead>
+                <tr style={{borderBottom: '1px solid #333'}}>
+                  <th style={{padding: '1rem 0'}}>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id} style={{borderBottom: '1px solid #333'}}>
+                    <td style={{padding: '1rem 0'}}>#{u.id}</td>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <span style={{
+                        padding: '0.2rem 0.6rem', 
+                        borderRadius: '12px', 
+                        fontSize: '0.8rem',
+                        background: u.role === 'admin' ? '#4caf50' : '#444',
+                        color: '#fff'
+                      }}>
+                        {u.role.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      {u.id !== JSON.parse(localStorage.getItem('user') || '{}').id ? (
+                        <button 
+                          onClick={() => handleRoleChange(u.id, u.role === 'admin' ? 'user' : 'admin')}
+                          className="btn"
+                          style={{
+                            padding: '0.4rem 0.8rem', 
+                            fontSize: '0.8rem',
+                            background: u.role === 'admin' ? '#f44336' : '#2196f3',
+                            border: 'none',
+                            color: 'white'
+                          }}
+                        >
+                          {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                        </button>
+                      ) : (
+                        <span style={{color: '#888', fontSize: '0.8rem'}}>You (Current)</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

@@ -81,4 +81,34 @@ const adminAuth = (req, res, next) => {
   });
 };
 
+// Get all users (Admin only)
+router.get('/users', adminAuth, async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, name, email, role FROM users ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update user role (Admin only)
+router.put('/users/:id/role', adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+  if (!['admin', 'user'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  try {
+    // Prevent an admin from demoting themselves (optional safety net, but good practice)
+    if (parseInt(id) === parseInt(req.user.id) && role === 'user') {
+      return res.status(400).json({ error: 'You cannot remove your own admin rights' });
+    }
+    
+    await db.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
+    res.json({ message: 'User role updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = { router, auth, adminAuth };
