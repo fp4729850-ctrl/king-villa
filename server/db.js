@@ -54,10 +54,10 @@ const initDB = async () => {
     const res = await pool.query('SELECT COUNT(*) as count FROM rooms');
     if (parseInt(res.rows[0].count) === 0) {
       const defaultRooms = [
-        { name: 'Room Number 1', desc: 'The pinnacle of luxury — king bed, private balcony, and panoramic views. (Capacity: 2 on bed + 3 extra beds)', price: 2500, capacity: 5, amenities: ['WiFi', 'AC', 'TV', 'Private Balcony', 'Coffee Maker'] },
-        { name: 'Room Number 2', desc: 'Regal interiors with plush furnishings and an en-suite luxury bathroom.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
-        { name: 'Room Number 3', desc: 'Serene garden-facing room with natural light and elegant decor.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
-        { name: 'Room Number 4', desc: 'Wake up steps away from the private pool with breathtaking views.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker'] },
+        { name: 'Room Number 1', desc: 'The pinnacle of luxury — king bed, private balcony, and panoramic views. (Capacity: 2 on bed + 3 extra beds)', price: 2500, capacity: 5, amenities: ['WiFi', 'AC', 'TV', 'Private Balcony', 'Coffee Maker', 'Private Parking'] },
+        { name: 'Room Number 2', desc: 'Regal interiors with plush furnishings and an en-suite luxury bathroom.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker', 'Private Parking'] },
+        { name: 'Room Number 3', desc: 'Serene garden-facing room with natural light and elegant decor.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker', 'Private Parking'] },
+        { name: 'Room Number 4', desc: 'Wake up steps away from the private pool with breathtaking views.', price: 1600, capacity: 2, amenities: ['WiFi', 'AC', 'TV', 'Coffee Maker', 'Private Parking'] },
       ];
       for (const r of defaultRooms) {
         await pool.query(
@@ -93,7 +93,7 @@ const initDB = async () => {
     if (entireVillaRes.rows.length === 0) {
       await pool.query(
         'INSERT INTO rooms (name, description, price, capacity, amenities, images, "isEntireVilla") VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        ['Entire King Villa', 'Experience ultimate luxury and privacy by booking the entire property. Includes all 4 royal rooms, private pool access, and exclusive amenities for your entire group.', 7300, 8, JSON.stringify(['WiFi', 'AC', 'TV', 'Private Pool', 'Kitchen']), JSON.stringify(['https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?q=80&w=1000&auto=format&fit=crop']), true]
+        ['Entire King Villa', 'Experience ultimate luxury and privacy by booking the entire property. Includes all 4 royal rooms, private pool access, and exclusive amenities for your entire group.', 7300, 8, JSON.stringify(['WiFi', 'AC', 'TV', 'Private Pool', 'Kitchen', 'Private Parking']), JSON.stringify(['https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?q=80&w=1000&auto=format&fit=crop']), true]
       );
     }
   } catch (err) {
