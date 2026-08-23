@@ -173,7 +173,7 @@ function Receipt() {
           </div>
 
           <div className="signature-box">
-            <p style={{marginBottom: '0.5rem', fontSize: '0.9rem'}}>Thank you for choosing <strong>KING VILLA</strong>.<br/>We look forward to welcoming you.<br/>For any assistance, contact us at<br/><strong>+91 9876543210</strong></p>
+            <p style={{marginBottom: '0.5rem', fontSize: '0.9rem'}}>Thank you for choosing <strong>KING VILLA</strong>.<br/>We look forward to welcoming you.<br/>For any assistance, contact us at<br/><strong>+91 9574090292</strong></p>
             <div style={{fontWeight: 'bold', marginTop: '1rem'}}>Authorized Signature</div>
             <div style={{fontFamily: 'var(--font-serif)', color: '#1a237e', fontSize: '1.5rem', fontStyle: 'italic', marginTop: '0.5rem'}}>King Villa</div>
           </div>

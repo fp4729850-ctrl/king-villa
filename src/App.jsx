@@ -37,6 +37,19 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/login" element={<Login />} />
         </Routes>
+
+        <footer style={{
+          textAlign: 'center', 
+          padding: '2rem', 
+          marginTop: 'auto', 
+          background: '#111', 
+          borderTop: '1px solid #333',
+          color: '#ccc',
+          fontSize: '0.9rem'
+        }}>
+          <p style={{marginBottom: '0.5rem'}}>👑 <strong>King Villa</strong></p>
+          <p>Contact us: <a href="tel:+919574090292" style={{color: 'var(--primary-color)', textDecoration: 'none'}}>+91 9574090292</a></p>
+        </footer>
       </div>
     </Router>
   );

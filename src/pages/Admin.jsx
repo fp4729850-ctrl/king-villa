@@ -115,7 +115,7 @@ function Admin() {
       qrCode: base64Qr,
       upiId: settings.upiId,
       contactEmail: 'hello@kingvilla.com', // keep defaults
-      contactPhone: '+91 9876543210'
+      contactPhone: '+91 9574090292'
     }, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
