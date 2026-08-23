@@ -59,7 +59,10 @@ function Rooms() {
 
       {entireVilla && (
         <div style={{textAlign: 'center', marginTop: '4rem', paddingBottom: '2rem'}}>
-          <h3 style={{color: 'var(--primary-color)', marginBottom: '1rem', fontSize: '1.5rem'}}>Looking for complete privacy?</h3>
+          <h3 style={{color: 'var(--primary-color)', marginBottom: '0.5rem', fontSize: '1.5rem'}}>Looking for complete privacy?</h3>
+          <p style={{color: '#ccc', marginBottom: '1.5rem', fontSize: '1rem'}}>
+            Book the entire villa and get exclusive access to our <strong>Private Kitchen</strong>.
+          </p>
           {entireVilla.isBookedToday ? (
             <div style={{display: 'inline-block', background: 'rgba(255, 0, 0, 0.1)', color: '#ff6b6b', padding: '1rem 2rem', borderRadius: '4px', fontWeight: 'bold'}}>
               Entire Villa is Currently Booked Today
