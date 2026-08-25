@@ -21,6 +21,7 @@ function Home() {
     <>
       <main className="hero">
         <div className="hero-overlay"></div>
+        <h1 className="hero-title">DAMAN</h1>
         <p className="hero-desc">
           Experience unparalleled luxury in our exclusive royal rooms. Your private paradise awaits.<br/>
           <span style={{display: 'inline-block', marginTop: '1rem', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.5)', borderRadius: '20px', fontSize: '0.95rem', fontWeight: '500'}}>
