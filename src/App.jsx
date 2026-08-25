@@ -37,6 +37,15 @@ const MobileNav = () => {
 };
 
 function App() {
+  React.useEffect(() => {
+    // Only log visit once per session to avoid inflation
+    if (!sessionStorage.getItem('visited')) {
+      fetch('/api/visits', { method: 'POST' })
+        .then(() => sessionStorage.setItem('visited', 'true'))
+        .catch(err => console.error('Error logging visit:', err));
+    }
+  }, []);
+
   return (
     <Router>
       <div className="app">

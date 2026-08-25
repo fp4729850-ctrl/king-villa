@@ -19,6 +19,9 @@ function Admin() {
   // Aadhar Modal State
   const [selectedAadhars, setSelectedAadhars] = useState(null);
 
+  // Visits
+  const [totalVisits, setTotalVisits] = useState(0);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -33,7 +36,14 @@ function Admin() {
     fetchSettings();
     fetchRooms();
     fetchUsers(token);
+    fetchVisits(token);
   }, []);
+
+  const fetchVisits = (token) => {
+    axios.get('/api/visits', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => setTotalVisits(res.data.total))
+      .catch(err => console.error(err));
+  };
 
   const fetchRooms = () => {
     axios.get('/api/rooms')
@@ -356,7 +366,12 @@ function Admin() {
       </div>
 
       <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
-        <h3 style={{marginBottom: '1.5rem', color: 'var(--primary-color)'}}>User Management (Admins)</h3>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+          <h3 style={{color: 'var(--primary-color)'}}>User Management (Admins)</h3>
+          <div style={{background: '#333', padding: '0.5rem 1rem', borderRadius: '4px'}}>
+            Total Website Visits: <strong style={{color: 'var(--primary-color)'}}>{totalVisits}</strong>
+          </div>
+        </div>
         {usersLoading ? <p>Loading users...</p> : (
           <div style={{overflowX: 'auto'}}>
             <table style={{width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.9rem'}}>
@@ -364,6 +379,7 @@ function Admin() {
                 <tr style={{borderBottom: '1px solid #333'}}>
                   <th style={{padding: '1rem 0'}}>ID</th>
                   <th>Name</th>
+                  <th>Mobile</th>
                   <th>Email</th>
                   <th>Role</th>
                   <th>Action</th>
@@ -374,6 +390,7 @@ function Admin() {
                   <tr key={u.id} style={{borderBottom: '1px solid #333'}}>
                     <td style={{padding: '1rem 0'}}>#{u.id}</td>
                     <td>{u.name}</td>
+                    <td>{u.mobile || '-'}</td>
                     <td>{u.email}</td>
                     <td>
                       <span style={{

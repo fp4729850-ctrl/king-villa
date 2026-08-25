@@ -88,6 +88,22 @@ const initDB = async () => {
       // column likely already exists, ignore
     }
 
+    // Migration: add mobile column if not exists
+    try {
+      await pool.query('ALTER TABLE users ADD COLUMN "mobile" TEXT');
+    } catch(err) {
+      // column likely already exists, ignore
+    }
+
+    // Create visits table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS visits (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ip TEXT
+      );
+    `);
+
     // Seed Entire Villa room if not exists
     const entireVillaRes = await pool.query('SELECT * FROM rooms WHERE "isEntireVilla" = true');
     if (entireVillaRes.rows.length === 0) {

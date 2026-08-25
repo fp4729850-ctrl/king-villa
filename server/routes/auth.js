@@ -7,7 +7,7 @@ const db = require('../db');
 const JWT_SECRET = 'supersecretkey_change_me_in_prod';
 
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, mobile } = req.body;
   
   try {
     const existing = await db.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -23,8 +23,8 @@ router.post('/register', async (req, res) => {
     const role = parseInt(countRes.rows[0].count) === 0 ? 'admin' : 'user';
 
     const insertRes = await db.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
-      [name, email, hash, role]
+      'INSERT INTO users (name, email, password, role, mobile) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [name, email, hash, role, mobile || '']
     );
 
     res.status(201).json({ message: 'User registered successfully', userId: insertRes.rows[0].id });
@@ -84,7 +84,7 @@ const adminAuth = (req, res, next) => {
 // Get all users (Admin only)
 router.get('/users', adminAuth, async (req, res) => {
   try {
-    const result = await db.query('SELECT id, name, email, role FROM users ORDER BY id ASC');
+    const result = await db.query('SELECT id, name, email, role, mobile FROM users ORDER BY id ASC');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
