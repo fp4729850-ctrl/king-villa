@@ -125,7 +125,7 @@ body {
   position: relative;
   min-height: 100vh;
   padding: 0 2rem;
-  background-image: url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=100&w=2070&auto=format&fit=crop');
+  background-image: url('/hero-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
