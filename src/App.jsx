@@ -91,14 +91,18 @@ function App() {
               <strong>Contact:</strong> <a href="tel:+919574090292" style={{color: '#fff', textDecoration: 'none'}}>+91 9574090292</a>
             </p>
             <div style={{marginBottom: '1.5rem', background: '#222', padding: '1rem', borderRadius: '8px', textAlign: 'left', border: '1px solid #333'}}>
-              <h4 style={{marginBottom: '0.5rem', color: '#ffb300'}}>Explore Nearby (Devka Road)</h4>
+              <h4 style={{marginBottom: '0.5rem', color: '#ffb300'}}>Explore Nearby</h4>
+              <p style={{marginBottom: '0.5rem', fontSize: '0.85rem'}}>
+                <strong>🍳 Best Breakfast:</strong> Surti Omlet (approx. 30m) <br/>
+                <a href="https://www.google.com/maps/search/?api=1&query=Surti+Omlet,+Devka+Road,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
+              </p>
               <p style={{marginBottom: '0.5rem', fontSize: '0.85rem'}}>
                 <strong>🍷 Wine Shop:</strong> Sea Shore Wines (approx. 500m) <br/>
                 <a href="https://www.google.com/maps/search/?api=1&query=Sea+Shore+Wines,+Devka+Road,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
               </p>
               <p style={{marginBottom: '0', fontSize: '0.85rem'}}>
-                <strong>🍽️ Best Veg & Non-Veg Restaurant:</strong> Veera Da Dhaba (approx. 600m) <br/>
-                <a href="https://www.google.com/maps/search/?api=1&query=Veera+Da+Dhaba,+Devka+Beach+Road,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
+                <strong>🍽️ Best Veg & Non-Veg Restaurant:</strong> Veera Da Dhaba (approx. 3km, Varkund) <br/>
+                <a href="https://www.google.com/maps/search/?api=1&query=Veera+Da+Dhaba,+Varkund,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
               </p>
             </div>
             
