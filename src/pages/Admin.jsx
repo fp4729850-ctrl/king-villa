@@ -470,7 +470,7 @@ function Admin() {
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
           <h3 style={{color: 'var(--primary-color)'}}>Channel Manager (OTA Sync)</h3>
           <div style={{display: 'flex', gap: '1rem'}}>
-            <button onClick={() => setShowOtaSchedule(true)} className="btn btn-secondary" style={{padding: '0.5rem 1rem'}}>
+            <button onClick={() => setShowOtaSchedule(true)} className="btn btn-outline" style={{padding: '0.5rem 1rem', background: '#fff', color: '#000'}}>
               View OTA Schedule
             </button>
             <button onClick={handleSync} disabled={syncLoading} className="btn btn-primary" style={{padding: '0.5rem 1rem'}}>
