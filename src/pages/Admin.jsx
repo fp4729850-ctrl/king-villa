@@ -532,7 +532,7 @@ function Admin() {
               {bookings.map(b => (
                 <tr key={b.id} style={{borderBottom: '1px solid #222', background: b.status === 'external' ? 'rgba(100, 100, 255, 0.05)' : 'transparent'}}>
                   <td style={{padding: '1rem'}}>{b.refCode}</td>
-                  <td style={{padding: '1rem'}}>
+                  <td style={{padding: '1rem', fontSize: '0.9rem'}}>
                     {b.status === 'external' ? (
                       <span style={{
                         background: b.guestDetails?.platform === 'Airbnb' ? '#FF5A5F'
@@ -548,7 +548,13 @@ function Admin() {
                       }}>
                         {b.guestDetails?.platform || 'OTA'}
                       </span>
-                    ) : b.userName}
+                    ) : (
+                      <div>
+                        <strong>Name:</strong> {b.guestDetails?.name || b.userName}<br/>
+                        <strong>Mobile:</strong> {b.guestDetails?.phone || b.userMobile || 'N/A'}<br/>
+                        <span style={{color: '#aaa', fontSize: '0.8rem'}}>{b.userEmail}</span>
+                      </div>
+                    )}
                   </td>
                   <td style={{padding: '1rem', fontSize: '0.9rem', whiteSpace: 'nowrap'}}>
                     <strong>In:</strong> {b.checkIn}<br/>

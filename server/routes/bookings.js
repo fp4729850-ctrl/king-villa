@@ -150,7 +150,7 @@ router.post('/:id/cancel', auth, async (req, res) => {
 router.get('/', adminAuth, async (req, res) => {
   try {
     const bookingsRes = await db.query(`
-      SELECT b.*, r.name as "roomName", u.name as "userName", u.email as "userEmail"
+      SELECT b.*, r.name as "roomName", u.name as "userName", u.email as "userEmail", u.mobile as "userMobile"
       FROM bookings b 
       JOIN rooms r ON b."roomId" = r.id 
       JOIN users u ON b."userId" = u.id
