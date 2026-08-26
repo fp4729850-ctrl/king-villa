@@ -137,7 +137,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
         </div>
 
         <div style={{display: 'flex', justifyContent: 'center'}}>
-          {!recognitionRef.current ? (
+          {!(window.SpeechRecognition || window.webkitSpeechRecognition) ? (
             <p style={{color: 'red'}}>Speech Recognition not supported in this browser.</p>
           ) : (
             <button 
