@@ -13,7 +13,7 @@ router.post('/booking', adminAuth, async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
     const roomsRes = await db.query('SELECT id, name FROM rooms');
     const roomsStr = JSON.stringify(roomsRes.rows);
