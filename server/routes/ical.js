@@ -5,7 +5,7 @@ const icalGenerator = require('ical-generator').default;
 const { adminAuth } = require('./auth');
 
 // 1. EXPORT iCal: Platforms will GET this link
-router.get('/export/:roomId', async (req, res) => {
+router.get(['/export/:roomId', '/export/:roomId.ics'], async (req, res) => {
   try {
     const { roomId } = req.params;
     const roomRes = await db.query('SELECT name FROM rooms WHERE id = $1', [roomId]);

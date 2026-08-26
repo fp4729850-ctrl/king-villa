@@ -478,7 +478,7 @@ function Admin() {
           {rooms.map(room => {
             const currentLinks = JSON.parse(room.icalLinks || '{}');
             const linksObj = Array.isArray(currentLinks) ? {} : currentLinks;
-            const exportUrl = `${window.location.origin}/api/ical/export/${room.id}`;
+            const exportUrl = `${window.location.origin}/api/ical/export/${room.id}.ics`;
             
             return (
               <div key={room.id} style={{background: '#222', padding: '1.5rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '2rem'}}>
