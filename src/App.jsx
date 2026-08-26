@@ -90,9 +90,17 @@ function App() {
             <p style={{marginBottom: '0.5rem'}}>
               <strong>Contact:</strong> <a href="tel:+919574090292" style={{color: '#fff', textDecoration: 'none'}}>+91 9574090292</a>
             </p>
-            <p style={{marginBottom: '1.5rem'}}>
-              <strong>🍷 Nearby Wine Shop:</strong> Sea Shore Wine (Devka Road, Marwad)
-            </p>
+            <div style={{marginBottom: '1.5rem', background: '#222', padding: '1rem', borderRadius: '8px', textAlign: 'left', border: '1px solid #333'}}>
+              <h4 style={{marginBottom: '0.5rem', color: '#ffb300'}}>Explore Nearby (Devka Road)</h4>
+              <p style={{marginBottom: '0.5rem', fontSize: '0.85rem'}}>
+                <strong>🍷 Wine Shop:</strong> Sea Shore Wines (approx. 500m) <br/>
+                <a href="https://www.google.com/maps/search/?api=1&query=Sea+Shore+Wines,+Devka+Road,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
+              </p>
+              <p style={{marginBottom: '0', fontSize: '0.85rem'}}>
+                <strong>🍽️ Best Veg & Non-Veg Restaurant:</strong> Veera Da Dhaba (approx. 600m) <br/>
+                <a href="https://www.google.com/maps/search/?api=1&query=Veera+Da+Dhaba,+Devka+Beach+Road,+Daman" target="_blank" rel="noreferrer" style={{color: '#4fc3f7', textDecoration: 'none'}}>📍 Open in Google Maps</a>
+              </p>
+            </div>
             
             {/* Google Maps Embed */}
             <div style={{width: '100%', overflow: 'hidden', borderRadius: '8px', border: '1px solid #333'}}>
