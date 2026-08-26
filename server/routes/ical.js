@@ -40,76 +40,96 @@ router.get(['/export/:roomId', '/export/:roomId.ics'], async (req, res) => {
 });
 
 // 2. IMPORT iCal: Admin triggers sync manually to fetch from external OTAs
-router.post('/sync', adminAuth, async (req, res) => {
-  try {
-    const roomsRes = await db.query('SELECT id, "icalLinks" FROM rooms');
-    let importedCount = 0;
+async function performSync() {
+  const roomsRes = await db.query('SELECT id, "icalLinks" FROM rooms');
+  let importedCount = 0;
 
-    for (const room of roomsRes.rows) {
-      const linksData = JSON.parse(room.icalLinks || '{}');
-      // linksData is an object like { airbnb: '...', booking: '...', agoda: '...', goibibo: '...' }
-      const platformEntries = Array.isArray(linksData) 
-        ? linksData.map(url => ({ platform: 'OTA', url }))
-        : Object.entries(linksData)
-            .filter(([_, url]) => url && url.trim() !== '')
-            .map(([platform, url]) => ({ 
-              platform: platform === 'airbnb' ? 'Airbnb' 
-                      : platform === 'booking' ? 'Booking.com' 
-                      : platform === 'agoda' ? 'Agoda' 
-                      : platform === 'goibibo' ? 'Goibibo/MMT' 
-                      : platform,
-              url 
-            }));
+  for (const room of roomsRes.rows) {
+    const linksData = JSON.parse(room.icalLinks || '{}');
+    // linksData is an object like { airbnb: '...', booking: '...', agoda: '...', goibibo: '...' }
+    const platformEntries = Array.isArray(linksData) 
+      ? linksData.map(url => ({ platform: 'OTA', url }))
+      : Object.entries(linksData)
+          .filter(([_, url]) => url && url.trim() !== '')
+          .map(([platform, url]) => ({ 
+            platform: platform === 'airbnb' ? 'Airbnb' 
+                    : platform === 'booking' ? 'Booking.com' 
+                    : platform === 'agoda' ? 'Agoda' 
+                    : platform === 'goibibo' ? 'Goibibo/MMT' 
+                    : platform,
+            url 
+          }));
 
-      if (platformEntries.length === 0) continue;
+    if (platformEntries.length === 0) continue;
 
-      for (const { platform, url } of platformEntries) {
-        try {
-          const events = await ical.async.fromURL(url);
-          
-          for (const key in events) {
-            const ev = events[key];
-            if (ev.type === 'VEVENT') {
-              const start = ev.start.toISOString().split('T')[0];
-              const end = ev.end.toISOString().split('T')[0];
-              const uid = ev.uid || Math.random().toString(36).substring(2);
-              const refCode = `OTA-${platform.replace(/[^a-zA-Z]/g, '')}-${uid}`.substring(0, 50);
+    for (const { platform, url } of platformEntries) {
+      try {
+        const events = await ical.async.fromURL(url);
+        
+        for (const key in events) {
+          const ev = events[key];
+          if (ev.type === 'VEVENT') {
+            const start = ev.start.toISOString().split('T')[0];
+            const end = ev.end.toISOString().split('T')[0];
+            const uid = ev.uid || Math.random().toString(36).substring(2);
+            const refCode = `OTA-${platform.replace(/[^a-zA-Z]/g, '')}-${uid}`.substring(0, 50);
 
-              // Check if already imported
-              const existRes = await db.query('SELECT id FROM bookings WHERE "refCode" = $1', [refCode]);
-              
-              if (existRes.rows.length === 0) {
-                const overlapRes = await db.query(`
-                  SELECT id FROM bookings
-                  WHERE "roomId" = $1 
-                  AND status IN ('paid', 'confirmed', 'cancel_request', 'external')
-                  AND ("checkIn" < $2 AND "checkOut" > $3)
-                `, [room.id, end, start]);
+            // Check if already imported
+            const existRes = await db.query('SELECT id FROM bookings WHERE "refCode" = $1', [refCode]);
+            
+            if (existRes.rows.length === 0) {
+              const overlapRes = await db.query(`
+                SELECT id FROM bookings
+                WHERE "roomId" = $1 
+                AND status IN ('paid', 'confirmed', 'cancel_request', 'external')
+                AND ("checkIn" < $2 AND "checkOut" > $3)
+              `, [room.id, end, start]);
 
-                if (overlapRes.rows.length === 0) {
-                  await db.query(
-                    'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", amount, status, "refCode", "guestDetails") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-                    [1, room.id, start, end, 0, 'external', refCode, 
-                     JSON.stringify({ 
-                       note: ev.summary || 'OTA Import', 
-                       platform: platform,
-                       source: platform
-                     })]
-                  );
-                  importedCount++;
-                }
+              if (overlapRes.rows.length === 0) {
+                await db.query(
+                  'INSERT INTO bookings ("userId", "roomId", "checkIn", "checkOut", amount, status, "refCode", "guestDetails") VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                  [1, room.id, start, end, 0, 'external', refCode, 
+                   JSON.stringify({ 
+                     note: ev.summary || 'OTA Import', 
+                     platform: platform,
+                     source: platform
+                   })]
+                );
+                importedCount++;
               }
             }
           }
-        } catch (e) {
-          console.error(`Error syncing ${platform} link:`, e.message);
         }
+      } catch (e) {
+        console.error(`Error syncing ${platform} link:`, e.message);
       }
     }
+  }
+  return importedCount;
+}
 
+router.post('/sync', adminAuth, async (req, res) => {
+  try {
+    const importedCount = await performSync();
     res.json({ message: `Sync complete. Imported ${importedCount} new external bookings.` });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2b. CRON IMPORT iCal: Automated sync every 12 hours via Vercel Cron
+router.get('/cron/sync', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized cron request' });
+    }
+    
+    const importedCount = await performSync();
+    res.json({ message: `Cron sync complete. Imported ${importedCount} new bookings.` });
+  } catch (err) {
+    console.error('Cron sync error:', err);
     res.status(500).json({ error: err.message });
   }
 });
