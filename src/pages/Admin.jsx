@@ -22,6 +22,9 @@ function Admin() {
   // Visits
   const [totalVisits, setTotalVisits] = useState(0);
 
+  // OTA Schedule State
+  const [showOtaSchedule, setShowOtaSchedule] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -466,9 +469,14 @@ function Admin() {
       <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
           <h3 style={{color: 'var(--primary-color)'}}>Channel Manager (OTA Sync)</h3>
-          <button onClick={handleSync} disabled={syncLoading} className="btn btn-primary" style={{padding: '0.5rem 1rem'}}>
-            {syncLoading ? 'Syncing...' : 'Sync Now with OTAs'}
-          </button>
+          <div style={{display: 'flex', gap: '1rem'}}>
+            <button onClick={() => setShowOtaSchedule(true)} className="btn btn-secondary" style={{padding: '0.5rem 1rem'}}>
+              View OTA Schedule
+            </button>
+            <button onClick={handleSync} disabled={syncLoading} className="btn btn-primary" style={{padding: '0.5rem 1rem'}}>
+              {syncLoading ? 'Syncing...' : 'Sync Now with OTAs'}
+            </button>
+          </div>
         </div>
         <p style={{marginBottom: '2rem', fontSize: '0.9rem', color: '#ccc'}}>
           Export calendars to lock dates on Airbnb/Booking.com. Import their iCal links here (one per line) to lock dates on this website.
@@ -619,22 +627,95 @@ function Admin() {
       {selectedAadhars && (
         <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem'}}>
           <div style={{background: '#222', padding: '2rem', borderRadius: '8px', maxWidth: '800px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative'}}>
-            <button onClick={() => setSelectedAadhars(null)} style={{position: 'absolute', top: '10px', right: '10px', background: 'red', color: 'white', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderRadius: '4px'}}>
-              Close
-            </button>
-            <h3 style={{marginBottom: '1rem'}}>Uploaded Aadhar Cards</h3>
-            {Array.isArray(selectedAadhars) && selectedAadhars.length > 0 ? (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                {selectedAadhars.map((base64Str, i) => (
-                  <div key={i} style={{border: '1px solid #444', padding: '1rem', borderRadius: '4px'}}>
-                    <h4 style={{marginBottom: '0.5rem'}}>Aadhar {i + 1}</h4>
-                    <img src={base64Str} alt={`Aadhar ${i+1}`} style={{maxWidth: '100%', height: 'auto', borderRadius: '4px'}} />
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1a1a1a', padding: '2rem', borderRadius: '8px', maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+              <h3 style={{color: 'var(--primary-color)'}}>Guest Aadhar Cards</h3>
+              <button onClick={() => setSelectedAadhars(null)} style={{background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+            </div>
+            
+            <div style={{display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center'}}>
+              {selectedAadhars.map((url, i) => (
+                <div key={i} style={{border: '1px solid #333', padding: '0.5rem', borderRadius: '8px'}}>
+                  <img src={url} alt={`Aadhar ${i+1}`} style={{maxWidth: '300px', maxHeight: '400px', objectFit: 'contain'}} />
+                </div>
+              ))}
+              {selectedAadhars.length === 0 && <p style={{color: '#888'}}>No Aadhar cards uploaded for this booking.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTA Schedule Modal */}
+      {showOtaSchedule && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1a1a1a', padding: '2rem', borderRadius: '8px', maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+              <h3 style={{color: 'var(--primary-color)'}}>Upcoming OTA Schedule (2 Months)</h3>
+              <button onClick={() => setShowOtaSchedule(false)} style={{background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+            </div>
+            
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+              {(() => {
+                const now = new Date();
+                const twoMonthsLater = new Date();
+                twoMonthsLater.setDate(now.getDate() + 60);
+
+                const otaBookings = bookings.filter(b => {
+                  if (b.status !== 'external') return false;
+                  const cOut = new Date(b.checkOut);
+                  const cIn = new Date(b.checkIn);
+                  return cOut >= now && cIn <= twoMonthsLater;
+                }).sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+                if (otaBookings.length === 0) {
+                  return <p style={{color: '#888'}}>No upcoming OTA bookings in the next 60 days.</p>;
+                }
+
+                // Group by room
+                const grouped = otaBookings.reduce((acc, b) => {
+                  const roomName = rooms.find(r => r.id === b.roomId)?.name || `Room ${b.roomId}`;
+                  if (!acc[roomName]) acc[roomName] = [];
+                  acc[roomName].push(b);
+                  return acc;
+                }, {});
+
+                return Object.entries(grouped).map(([roomName, bks]) => (
+                  <div key={roomName} style={{border: '1px solid #333', padding: '1rem', borderRadius: '8px', background: '#222'}}>
+                    <h4 style={{color: '#fff', marginBottom: '1rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem'}}>{roomName}</h4>
+                    {bks.map((b, i) => {
+                      let platform = 'OTA';
+                      try {
+                        if (b.guestDetails) {
+                          const parsed = typeof b.guestDetails === 'string' ? JSON.parse(b.guestDetails) : b.guestDetails;
+                          if (parsed.platform) platform = parsed.platform;
+                        }
+                      } catch (e) {}
+                      
+                      const cInStr = new Date(b.checkIn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      const cOutStr = new Date(b.checkOut).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                      return (
+                        <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: i === bks.length - 1 ? 'none' : '1px dashed #444'}}>
+                          <span style={{color: '#ddd'}}>{cInStr} to {cOutStr}</span>
+                          <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{platform}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p>No Aadhar cards uploaded for this booking.</p>
-            )}
+                ));
+              })()}
+            </div>
           </div>
         </div>
       )}
