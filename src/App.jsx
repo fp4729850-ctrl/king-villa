@@ -87,8 +87,11 @@ function App() {
             <p style={{marginBottom: '0.5rem'}}>
               <strong>Address:</strong> Devka Daman Road, Devka Beach, Village Marwad, Near Marwad Panchayat, Nani Daman, Daman
             </p>
-            <p style={{marginBottom: '1.5rem'}}>
+            <p style={{marginBottom: '0.5rem'}}>
               <strong>Contact:</strong> <a href="tel:+919574090292" style={{color: '#fff', textDecoration: 'none'}}>+91 9574090292</a>
+            </p>
+            <p style={{marginBottom: '1.5rem'}}>
+              <strong>🍷 Nearby Wine Shop:</strong> Sea Shore Wine (Devka Road, Marwad)
             </p>
             
             {/* Google Maps Embed */}
