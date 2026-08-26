@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import AiVoiceModal from '../components/AiVoiceModal';
 
 function Admin() {
   const [bookings, setBookings] = useState([]);
@@ -24,6 +25,9 @@ function Admin() {
 
   // OTA Schedule State
   const [showOtaSchedule, setShowOtaSchedule] = useState(false);
+
+  // AI Voice State
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -273,9 +277,14 @@ function Admin() {
       <div style={{maxWidth: '1000px', margin: '0 auto 2rem auto', background: '#1a1a1a', padding: '2rem', borderRadius: '8px'}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
           <h3 style={{color: '#4caf50'}}>🏠 Direct Booking (Walk-in Customer)</h3>
-          <button onClick={() => setShowDirectForm(!showDirectForm)} className="btn btn-primary" style={{padding: '0.5rem 1.5rem', background: '#4caf50'}}>
-            {showDirectForm ? 'Close Form' : '+ New Walk-in Booking'}
-          </button>
+          <div style={{display: 'flex', gap: '1rem'}}>
+            <button onClick={() => setShowAiModal(true)} className="btn btn-outline" style={{
+              background: '#fff', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'
+            }}>🎙️ AI VOICE BOOKING</button>
+            <button onClick={() => setShowDirectForm(!showDirectForm)} className="btn btn-primary" style={{padding: '0.5rem 1.5rem', background: '#4caf50'}}>
+              {showDirectForm ? 'Close Form' : '+ New Walk-in Booking'}
+            </button>
+          </div>
         </div>
         
         {showDirectForm && (
@@ -716,6 +725,15 @@ function Admin() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Voice Modal */}
+      {showAiModal && (
+        <AiVoiceModal 
+          onClose={() => setShowAiModal(false)}
+          onBookingSuccess={() => fetchBookings(localStorage.getItem('token'))}
+          rooms={rooms}
+        />
       )}
     </section>
   );

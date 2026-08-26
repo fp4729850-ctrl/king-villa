@@ -26,6 +26,9 @@ app.use('/api/bookings', bookingsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/ical', icalRouter);
 
+const aiRouter = require('./routes/ai');
+app.use('/api/ai', aiRouter);
+
 const { adminAuth } = require('./routes/auth');
 
 app.post('/api/visits', async (req, res) => {
