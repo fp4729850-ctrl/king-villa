@@ -18,6 +18,9 @@ router.post('/booking', adminAuth, async (req, res) => {
     const roomsRes = await db.query('SELECT id, name FROM rooms');
     const roomsStr = JSON.stringify(roomsRes.rows);
 
+    const existingBookingsRes = await db.query('SELECT "roomId", "checkIn", "checkOut" FROM bookings WHERE status != $1', ['cancelled']);
+    const existingBookingsStr = JSON.stringify(existingBookingsRes.rows);
+
     const systemInstruction = `
 You are a helpful hotel booking AI assistant for King Villa. 
 You communicate with the user in conversational Hindi (written in English alphabet/Hinglish).
@@ -28,7 +31,12 @@ Your goal is to extract the following 5 pieces of information from the user's sp
 4. Number of Guests (Integer).
 5. Amount Received (Integer in Rupees).
 
-If ANY of these 5 pieces of information are MISSING, your response MUST be a simple, friendly question in Hinglish asking for the missing info. DO NOT output JSON if info is missing.
+CRITICAL AVAILABILITY CHECK:
+Here is a list of existing booked dates: ${existingBookingsStr}
+Before confirming ANY booking, you MUST check if the requested room is already booked on the requested dates. A room is unavailable if the requested [check-in, check-out) date range overlaps with an existing booking's [checkIn, checkOut) for that roomId. 
+If the room is already booked, you MUST politely reject the booking in Hinglish, state that the room is already booked on those dates, and ask if they want to choose different dates or a different room. DO NOT output JSON in this case.
+
+If ANY of these 5 pieces of information are MISSING (and the room is available), your response MUST be a simple, friendly question in Hinglish asking for the missing info. DO NOT output JSON if info is missing.
 Example question: "Theek hai room 1 book kar denge. Check out kab hai aur kitne log aane wale hain?"
 
 If ALL 5 pieces of information are present and clear, your response MUST be ONLY a JSON object (no markdown, no backticks, just raw JSON) matching this exact schema:
