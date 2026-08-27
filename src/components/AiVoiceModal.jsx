@@ -8,7 +8,8 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const [loading, setLoading] = useState(false);
   const recognitionRef = useRef(null);
   const shouldListenRef = useRef(false);
-  const utteranceRef = useRef(null); // Fix Chrome early onend bug
+  const utteranceRef = useRef(null); 
+  const transcriptBufferRef = useRef(''); // Buffer to store speech until manual stop
 
   useEffect(() => {
     historyRef.current = history;
@@ -19,19 +20,24 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.lang = 'hi-IN';
+      recognition.continuous = true; // Keep listening
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        // Turn off mic temporarily while processing
-        shouldListenRef.current = false; 
-        setIsListening(false);
-        handleUserSpeech(transcript);
+        let newText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            newText += event.results[i][0].transcript + ' ';
+          }
+        }
+        if (newText) {
+          transcriptBufferRef.current += newText;
+        }
       };
 
       recognition.onend = () => {
-        // If we are supposed to be listening (e.g. paused automatically), restart it
+        // If it stopped automatically (due to pause/timeout) but user hasn't clicked stop
         if (shouldListenRef.current) {
           try {
             recognition.start();
@@ -43,8 +49,10 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error", event.error);
-        shouldListenRef.current = false;
-        setIsListening(false);
+        if (event.error !== 'no-speech') {
+          shouldListenRef.current = false;
+          setIsListening(false);
+        }
       };
 
       recognitionRef.current = recognition;
@@ -52,6 +60,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   }, []);
 
   const handleUserSpeech = async (text) => {
+    if (!text) return;
     const currentHistory = historyRef.current;
     const newHistory = [...currentHistory, { role: 'user', content: text }];
     setHistory(newHistory);
@@ -111,15 +120,14 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
   const speak = (text, resumeListening = false) => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Stop ongoing speech
+      window.speechSynthesis.cancel(); 
       const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance; // Prevent GC
+      utteranceRef.current = utterance; 
 
       utterance.lang = 'hi-IN';
-      utterance.rate = 0.95; // Slightly slower for more natural feel
+      utterance.rate = 0.95; 
       utterance.pitch = 1;
       
-      // Try to get a high-quality human-like voice (like Google's)
       const voices = window.speechSynthesis.getVoices();
       const bestVoice = voices.find(v => v.lang.includes('hi') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))) 
                         || voices.find(v => v.lang.includes('hi'));
@@ -130,6 +138,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       
       utterance.onend = () => {
         if (resumeListening) {
+          transcriptBufferRef.current = '';
           shouldListenRef.current = true;
           setIsListening(true);
           try {
@@ -140,7 +149,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       
       window.speechSynthesis.speak(utterance);
     } else if (resumeListening) {
-      // fallback if no speech synthesis
+      transcriptBufferRef.current = '';
       shouldListenRef.current = true;
       setIsListening(true);
       try {
@@ -154,8 +163,15 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       shouldListenRef.current = false;
       setIsListening(false);
       recognitionRef.current?.stop();
+      
+      const finalSpeech = transcriptBufferRef.current.trim();
+      if (finalSpeech) {
+        handleUserSpeech(finalSpeech);
+      }
+      transcriptBufferRef.current = '';
     } else {
-      window.speechSynthesis.cancel(); // Mute AI when user interrupts
+      window.speechSynthesis.cancel(); 
+      transcriptBufferRef.current = '';
       shouldListenRef.current = true;
       setIsListening(true);
       try {
