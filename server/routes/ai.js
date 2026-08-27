@@ -25,32 +25,43 @@ router.post('/booking', adminAuth, async (req, res) => {
     `);
     const existingBookingsStr = JSON.stringify(existingBookingsRes.rows);
 
+    // Pre-compute a human-readable blocked list so AI cannot hallucinate
+    const allRooms = roomsRes.rows;
+    const blockedRoomsList = existingBookingsRes.rows.map(b => {
+      const room = allRooms.find(r => r.id === parseInt(b.roomId));
+      return `- ${room?.name || 'Room ' + b.roomId} (ID: ${b.roomId}): ${b.checkIn} se ${b.checkOut} tak BLOCKED hai`;
+    }).join('\n');
+    const entireVillaRooms = allRooms.filter(r => r.isEntireVilla).map(r => r.id);
+
     const systemInstruction = `
 You are a helpful hotel booking AI assistant for King Villa. 
 You communicate with the user in conversational Hindi (written in English alphabet/Hinglish).
 The user is a Hotel Admin. They can either BOOK a room or BLOCK a room.
 
+Available Rooms: ${roomsStr}
+Today's date: ${new Date().toISOString().split('T')[0]} (IST). 'Kal' means tomorrow.
+
 For a NORMAL BOOKING, you need 5 pieces of info:
-1. Room ID(s): (Map to IDs: ${roomsStr})
-2. Check-in Date: (Format YYYY-MM-DD. Today is ${new Date().toISOString().split('T')[0]}). 'Kal'=tomorrow.
-3. Check-out Date: (Format YYYY-MM-DD).
-4. Number of Guests (Integer).
-5. Amount Received (Integer in Rupees).
-
-For BLOCKING A ROOM (e.g., "room 1 ko block kardo"), you only need:
 1. Room ID(s)
-2. Check-in Date
-3. Check-out Date
+2. Check-in Date (Format YYYY-MM-DD)
+3. Check-out Date (Format YYYY-MM-DD)
+4. Number of Guests (Integer)
+5. Amount Received (Integer in Rupees)
 
-CRITICAL AVAILABILITY CHECK:
-Here is a list of existing booked dates: ${existingBookingsStr}
-Before confirming ANY booking or block, you MUST check if the requested room is already booked on the requested dates. A room is unavailable if the requested [check-in, check-out) date range overlaps with an existing booking's [checkIn, checkOut) for that roomId. 
-CRITICAL RULE: If a room with "isEntireVilla":true is booked on a date, ALL OTHER ROOMS are also unavailable on that date. If a normal room is booked, the "isEntireVilla" room is unavailable.
-If the room is already booked, you MUST politely reject the request in Hinglish, state that the room is already booked on those dates. DO NOT output JSON in this case.
+For BLOCKING A ROOM, you only need:
+1. Room ID(s), 2. Check-in Date, 3. Check-out Date
+
+=== BLOCKED DATES (DO NOT BOOK THESE) ===
+The following rooms are ALREADY BOOKED. You MUST NEVER confirm a booking for these rooms on these dates:
+${blockedRoomsList || 'Koi booking nahi hai abhi.'}
+Entire Villa room IDs: ${JSON.stringify(entireVillaRooms)} — agar ye booked hai toh baaki sab rooms bhi unavailable hain.
+=========================================
+
+If the user asks to book a room that appears in the BLOCKED DATES list above, you MUST say in Hinglish that the room is already booked and suggest other dates or rooms. NEVER output JSON for a blocked room.
 
 If information is missing, ask a friendly question in Hinglish. DO NOT output JSON if info is missing.
 
-If all required info is present and the room is available, output ONLY a JSON object:
+If all required info is present and the room is NOT blocked, output ONLY a JSON object:
 For BOOKING:
 {
   "ready": true,
@@ -173,26 +184,40 @@ router.post('/customer-booking', async (req, res) => {
     `);
     const existingBookingsStr = JSON.stringify(existingBookingsRes.rows);
 
+    // Pre-compute a human-readable blocked list so AI cannot hallucinate
+    const allRooms = roomsRes.rows;
+    const blockedRoomsList = existingBookingsRes.rows.map(b => {
+      const room = allRooms.find(r => r.id === parseInt(b.roomId));
+      return `- ${room?.name || 'Room ' + b.roomId} (ID: ${b.roomId}): ${b.checkIn} se ${b.checkOut} tak BOOKED hai`;
+    }).join('\n');
+    const entireVillaRooms = allRooms.filter(r => r.isEntireVilla).map(r => r.id);
+
     const systemInstruction = `
 You are a helpful hotel booking AI assistant for King Villa. 
 You communicate with the user (the customer) in conversational Hindi (written in English alphabet/Hinglish).
 Your goal is to help the customer book a room. You CANNOT block rooms, only book them.
 
+Available Rooms: ${roomsStr}
+Today's date: ${new Date().toISOString().split('T')[0]} (IST).
+
 To create a booking, you must extract 5 pieces of information:
-1. Room preference (Map to IDs: ${roomsStr})
-2. Check-in Date (Format YYYY-MM-DD. Today is ${new Date().toISOString().split('T')[0]})
+1. Room preference
+2. Check-in Date (Format YYYY-MM-DD)
 3. Check-out Date (Format YYYY-MM-DD)
 4. Number of Guests
-5. Customer Name & Phone Number (Ask them to speak their name and phone number)
+5. Customer Name & Phone Number
 
-CRITICAL AVAILABILITY CHECK:
-Existing booked dates: ${existingBookingsStr}
-CRITICAL RULE: If a room with "isEntireVilla":true is booked on a date, ALL OTHER ROOMS are also unavailable on that date. If a normal room is booked, the "isEntireVilla" room is unavailable.
-If the requested room is already booked on those dates, politely tell the customer it is unavailable and suggest different dates or another room. DO NOT output JSON.
+=== BOOKED DATES (UNAVAILABLE) ===
+The following rooms are ALREADY BOOKED. You MUST NEVER confirm a booking for these rooms on these dates:
+${blockedRoomsList || 'Koi booking nahi hai abhi.'}
+Entire Villa room IDs: ${JSON.stringify(entireVillaRooms)} — agar ye booked hai toh baaki sab rooms bhi unavailable hain.
+==================================
+
+If the customer asks for a room that appears in the BOOKED DATES list above, you MUST politely say it is unavailable and suggest other dates or a different room. NEVER output JSON for a booked room.
 
 If ANY info is missing, politely ask the customer for it. DO NOT output JSON.
 
-Once ALL 5 pieces of info are provided and the room is available, calculate the total price based on the room price and nights, and output ONLY this JSON:
+Once ALL 5 pieces of info are provided and the room is NOT booked, calculate the total price and output ONLY this JSON:
 {
   "ready": true,
   "details": {
