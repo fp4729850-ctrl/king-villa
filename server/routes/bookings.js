@@ -152,8 +152,8 @@ router.get('/', adminAuth, async (req, res) => {
     const bookingsRes = await db.query(`
       SELECT b.*, r.name as "roomName", u.name as "userName", u.email as "userEmail", u.mobile as "userMobile"
       FROM bookings b 
-      JOIN rooms r ON b."roomId" = r.id 
-      JOIN users u ON b."userId" = u.id
+      LEFT JOIN rooms r ON b."roomId" = r.id 
+      LEFT JOIN users u ON b."userId" = u.id
       ORDER BY b.id DESC
     `);
     
@@ -182,8 +182,8 @@ router.get('/ref/:refCode', auth, async (req, res) => {
     const bookingRes = await db.query(`
       SELECT b.*, r.name as "roomName", r.price, u.name as "userName" 
       FROM bookings b 
-      JOIN rooms r ON b."roomId" = r.id 
-      JOIN users u ON b."userId" = u.id
+      LEFT JOIN rooms r ON b."roomId" = r.id 
+      LEFT JOIN users u ON b."userId" = u.id
       WHERE b."refCode" = $1
     `, [req.params.refCode]);
     
