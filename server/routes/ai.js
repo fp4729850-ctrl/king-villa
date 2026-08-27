@@ -104,6 +104,38 @@ Output ONLY valid JSON if ready. If not, output text.
       
       const parsed = JSON.parse(cleanText.trim());
       if (parsed.ready) {
+        let overlap = false;
+        let overlapRoomId = null;
+        
+        const reqBookings = parsed.bookings || [];
+        for (const reqBooking of reqBookings) {
+          const reqIn = new Date(reqBooking.checkIn).getTime();
+          const reqOut = new Date(reqBooking.checkOut).getTime();
+          
+          for (const extBooking of existingBookingsRes.rows) {
+            const extIn = new Date(extBooking.checkIn).getTime();
+            const extOut = new Date(extBooking.checkOut).getTime();
+            
+            if (reqIn < extOut && reqOut > extIn) {
+              const reqRoomId = parseInt(reqBooking.roomId);
+              const extRoomId = parseInt(extBooking.roomId);
+              const reqRoom = roomsRes.rows.find(r => r.id === reqRoomId);
+              const extRoom = roomsRes.rows.find(r => r.id === extRoomId);
+              
+              if (reqRoomId === extRoomId || reqRoom?.isEntireVilla || extRoom?.isEntireVilla) {
+                overlap = true;
+                overlapRoomId = reqRoomId;
+                break;
+              }
+            }
+          }
+          if (overlap) break;
+        }
+
+        if (overlap) {
+          return res.json({ ready: false, text: \`Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?\` });
+        }
+
         return res.json({ ready: true, data: parsed });
       }
     } catch (e) {
@@ -200,6 +232,38 @@ Output ONLY JSON if ready. If not, output text.
       
       const parsed = JSON.parse(cleanText.trim());
       if (parsed.ready) {
+        let overlap = false;
+        let overlapRoomId = null;
+        
+        const reqBookings = parsed.details ? [parsed.details] : [];
+        for (const reqBooking of reqBookings) {
+          const reqIn = new Date(reqBooking.checkIn).getTime();
+          const reqOut = new Date(reqBooking.checkOut).getTime();
+          
+          for (const extBooking of existingBookingsRes.rows) {
+            const extIn = new Date(extBooking.checkIn).getTime();
+            const extOut = new Date(extBooking.checkOut).getTime();
+            
+            if (reqIn < extOut && reqOut > extIn) {
+              const reqRoomId = parseInt(reqBooking.roomId);
+              const extRoomId = parseInt(extBooking.roomId);
+              const reqRoom = roomsRes.rows.find(r => r.id === reqRoomId);
+              const extRoom = roomsRes.rows.find(r => r.id === extRoomId);
+              
+              if (reqRoomId === extRoomId || reqRoom?.isEntireVilla || extRoom?.isEntireVilla) {
+                overlap = true;
+                overlapRoomId = reqRoomId;
+                break;
+              }
+            }
+          }
+          if (overlap) break;
+        }
+
+        if (overlap) {
+          return res.json({ ready: false, text: \`Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?\` });
+        }
+
         return res.json({ ready: true, data: parsed });
       }
     } catch (e) {
