@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import ImageCarousel from '../components/ImageCarousel';
+import CustomerAiModal from '../components/CustomerAiModal';
 
 function Home() {
   const [rooms, setRooms] = useState([]);
   const [entireVilla, setEntireVilla] = useState(null);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
     axios.get('/api/rooms')
@@ -30,14 +32,36 @@ function Home() {
         </p>
         
         <div className="hero-buttons">
-          <Link to="/rooms" className="btn btn-primary">Book Your Stay</Link>
-          <a href="#rooms" className="btn btn-outline">Explore Rooms</a>
+          <Link to="#rooms" className="btn btn-primary" onClick={(e) => {
+            e.preventDefault();
+            document.getElementById('rooms').scrollIntoView({ behavior: 'smooth' });
+          }}>
+            Explore Rooms
+          </Link>
+          <button onClick={() => setShowAiModal(true)} className="btn btn-outline" style={{background: '#4caf50', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}>
+            🎙️ Book with AI
+          </button>
         </div>
 
         <div className="scroll-indicator">
           v
         </div>
       </main>
+
+      {/* Floating AI Button */}
+      <button 
+        onClick={() => setShowAiModal(true)}
+        style={{
+          position: 'fixed', bottom: '80px', right: '20px', zIndex: 999,
+          background: '#4caf50', color: '#fff', border: 'none', borderRadius: '50px',
+          padding: '1rem 1.5rem', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px'
+        }}
+      >
+        🎙️ AI Voice Booking
+      </button>
+
+      {showAiModal && <CustomerAiModal onClose={() => setShowAiModal(false)} rooms={rooms} />}
 
       <section id="rooms" className="rooms-section">
         <div className="section-header">

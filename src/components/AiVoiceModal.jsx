@@ -44,21 +44,26 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       });
 
       if (res.data.ready) {
-        // Booking is ready
-        setHistory(prev => [...prev, { role: 'model', content: "Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon..." }]);
-        speak("Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon.");
+        const intent = res.data.data.intent;
+        if (intent === 'block') {
+          setHistory(prev => [...prev, { role: 'model', content: "Room ko successfully block kiya jaa raha hai..." }]);
+          speak("Room ko successfully block kiya jaa raha hai.");
+        } else {
+          setHistory(prev => [...prev, { role: 'model', content: "Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon..." }]);
+          speak("Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon.");
+        }
         
         // Save the bookings
         const bookingsToSave = res.data.data.bookings;
         for (const b of bookingsToSave) {
           await axios.post('/api/bookings/admin-direct', {
             roomId: b.roomId,
-            guestName: 'Walk-in (AI)',
+            guestName: intent === 'block' ? 'Blocked by Admin' : 'Walk-in (AI)',
             guestPhone: 'NA',
             checkIn: b.checkIn,
             checkOut: b.checkOut,
-            guestCount: b.guests,
-            amount: b.amount,
+            guestCount: b.guests || 1,
+            amount: b.amount || 0,
             paymentType: 'cash',
             aadharCards: []
           }, {
