@@ -18,6 +18,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
   const recognitionRef = useRef(null);
   const shouldListenRef = useRef(false);
+  const utteranceRef = useRef(null); // Fix Chrome early onend bug
 
   useEffect(() => {
     historyRef.current = history;
@@ -95,7 +96,10 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
   const speak = (text, resumeListening = false) => {
     if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop any ongoing speech
       const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance; // Keep reference to prevent GC
+
       utterance.lang = 'hi-IN';
       utterance.rate = 0.95; 
       utterance.pitch = 1;
@@ -134,6 +138,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
       setIsListening(false);
       recognitionRef.current?.stop();
     } else {
+      window.speechSynthesis.cancel(); // Mute AI when user interrupts
       shouldListenRef.current = true;
       setIsListening(true);
       try {

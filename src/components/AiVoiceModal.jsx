@@ -8,6 +8,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const [loading, setLoading] = useState(false);
   const recognitionRef = useRef(null);
   const shouldListenRef = useRef(false);
+  const utteranceRef = useRef(null); // Fix Chrome early onend bug
 
   useEffect(() => {
     historyRef.current = history;
@@ -110,7 +111,10 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
   const speak = (text, resumeListening = false) => {
     if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop ongoing speech
       const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance; // Prevent GC
+
       utterance.lang = 'hi-IN';
       utterance.rate = 0.95; // Slightly slower for more natural feel
       utterance.pitch = 1;
@@ -151,6 +155,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       setIsListening(false);
       recognitionRef.current?.stop();
     } else {
+      window.speechSynthesis.cancel(); // Mute AI when user interrupts
       shouldListenRef.current = true;
       setIsListening(true);
       try {
