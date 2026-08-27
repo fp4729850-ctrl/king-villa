@@ -19,9 +19,7 @@ router.post('/booking', adminAuth, async (req, res) => {
     const roomsStr = JSON.stringify(roomsRes.rows);
 
     const existingBookingsRes = await db.query(`
-      SELECT "roomId", 
-             TO_CHAR("checkIn", 'YYYY-MM-DD') as "checkIn", 
-             TO_CHAR("checkOut", 'YYYY-MM-DD') as "checkOut" 
+      SELECT "roomId", "checkIn", "checkOut"
       FROM bookings 
       WHERE status != 'cancelled'
     `);
@@ -137,9 +135,7 @@ router.post('/customer-booking', async (req, res) => {
     const roomsStr = JSON.stringify(roomsRes.rows);
 
     const existingBookingsRes = await db.query(`
-      SELECT "roomId", 
-             TO_CHAR("checkIn", 'YYYY-MM-DD') as "checkIn", 
-             TO_CHAR("checkOut", 'YYYY-MM-DD') as "checkOut" 
+      SELECT "roomId", "checkIn", "checkOut"
       FROM bookings 
       WHERE status != 'cancelled'
     `);
