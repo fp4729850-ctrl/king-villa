@@ -133,7 +133,7 @@ Output ONLY valid JSON if ready. If not, output text.
         }
 
         if (overlap) {
-          return res.json({ ready: false, text: \`Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?\` });
+          return res.json({ ready: false, text: `Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?` });
         }
 
         return res.json({ ready: true, data: parsed });
@@ -261,7 +261,7 @@ Output ONLY JSON if ready. If not, output text.
         }
 
         if (overlap) {
-          return res.json({ ready: false, text: \`Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?\` });
+          return res.json({ ready: false, text: `Maaf kijiye, Room ${overlapRoomId} in dates par pehle se booked hai. Kya main kisi aur room ya date ke liye check karoon?` });
         }
 
         return res.json({ ready: true, data: parsed });
