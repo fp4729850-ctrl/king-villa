@@ -25,8 +25,9 @@ router.get(['/export/:roomId', '/export/:roomId.ics'], async (req, res) => {
 
     // Add a dummy event in the past so the calendar is never empty (fixes Agoda validation)
     cal.createEvent({
-      start: new Date('2020-01-01T00:00:00Z'),
-      end: new Date('2020-01-02T00:00:00Z'),
+      start: new Date('2020-01-01'),
+      end: new Date('2020-01-02'),
+      allDay: true,
       summary: 'Calendar Creation',
       description: 'System dummy event',
       id: 'dummy-event-1'
@@ -36,6 +37,7 @@ router.get(['/export/:roomId', '/export/:roomId.ics'], async (req, res) => {
       cal.createEvent({
         start: new Date(b.checkIn),
         end: new Date(b.checkOut),
+        allDay: true,
         summary: b.status === 'external' ? 'OTA Booking' : 'King Villa Direct Booking',
         description: 'Reservation via King Villa / OTA Sync',
         id: b.refCode
