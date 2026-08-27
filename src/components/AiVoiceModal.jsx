@@ -3,29 +3,46 @@ import axios from 'axios';
 
 export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const [history, setHistory] = useState([]);
+  const historyRef = useRef([]);
   const [isListening, setIsListening] = useState(false);
   const [loading, setLoading] = useState(false);
   const recognitionRef = useRef(null);
+  const shouldListenRef = useRef(false);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'hi-IN'; // Hindi (can handle Hinglish/English mixed)
+      recognition.lang = 'hi-IN';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
+        // Turn off mic temporarily while processing
+        shouldListenRef.current = false; 
+        setIsListening(false);
         handleUserSpeech(transcript);
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        // If we are supposed to be listening (e.g. paused automatically), restart it
+        if (shouldListenRef.current) {
+          try {
+            recognition.start();
+          } catch (e) {}
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error", event.error);
+        shouldListenRef.current = false;
         setIsListening(false);
       };
 
@@ -34,7 +51,8 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   }, []);
 
   const handleUserSpeech = async (text) => {
-    const newHistory = [...history, { role: 'user', content: text }];
+    const currentHistory = historyRef.current;
+    const newHistory = [...currentHistory, { role: 'user', content: text }];
     setHistory(newHistory);
     setLoading(true);
 
@@ -47,13 +65,12 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
         const intent = res.data.data.intent;
         if (intent === 'block') {
           setHistory(prev => [...prev, { role: 'model', content: "Room ko successfully block kiya jaa raha hai..." }]);
-          speak("Room ko successfully block kiya jaa raha hai.");
+          speak("Room ko successfully block kiya jaa raha hai.", false);
         } else {
           setHistory(prev => [...prev, { role: 'model', content: "Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon..." }]);
-          speak("Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon.");
+          speak("Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon.", false);
         }
         
-        // Save the bookings
         const bookingsToSave = res.data.data.bookings;
         for (const b of bookingsToSave) {
           await axios.post('/api/bookings/admin-direct', {
@@ -77,35 +94,57 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
         }, 3000);
 
       } else {
-        // Needs more info
         const aiText = res.data.text;
         setHistory(prev => [...prev, { role: 'model', content: aiText }]);
-        speak(aiText);
+        speak(aiText, true); // true = resume listening after speaking
       }
     } catch (err) {
       console.error(err);
       const errMsg = err.response?.data?.error || "Sorry, koi error aa gaya hai.";
       setHistory(prev => [...prev, { role: 'model', content: errMsg }]);
-      speak("Sorry, kuch error aa gaya hai.");
+      speak("Sorry, kuch error aa gaya hai.", true);
     } finally {
       setLoading(false);
     }
   };
 
-  const speak = (text) => {
+  const speak = (text, resumeListening = false) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
+      
+      utterance.onend = () => {
+        if (resumeListening) {
+          shouldListenRef.current = true;
+          setIsListening(true);
+          try {
+            recognitionRef.current?.start();
+          } catch(e) {}
+        }
+      };
+      
       window.speechSynthesis.speak(utterance);
+    } else if (resumeListening) {
+      // fallback if no speech synthesis
+      shouldListenRef.current = true;
+      setIsListening(true);
+      try {
+        recognitionRef.current?.start();
+      } catch(e) {}
     }
   };
 
   const toggleListen = () => {
     if (isListening) {
+      shouldListenRef.current = false;
+      setIsListening(false);
       recognitionRef.current?.stop();
     } else {
+      shouldListenRef.current = true;
       setIsListening(true);
-      recognitionRef.current?.start();
+      try {
+        recognitionRef.current?.start();
+      } catch (e) {}
     }
   };
 

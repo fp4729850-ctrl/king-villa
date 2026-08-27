@@ -3,37 +3,54 @@ import axios from 'axios';
 
 export default function CustomerAiModal({ onClose, rooms }) {
   const [history, setHistory] = useState([]);
+  const historyRef = useRef([]);
   const [isListening, setIsListening] = useState(false);
   const [loading, setLoading] = useState(false);
-  const recognitionRef = useRef(null);
-
-  // When ready is true, AI is done and we ask for Aadhar/Payment
+  
+  // Booking flow states
+  const [showUploads, setShowUploads] = useState(false);
   const [bookingDetails, setBookingDetails] = useState(null);
   
   // File states
-  const [aadharFiles, setAadharFiles] = useState([]);
-  const [paymentProof, setPaymentProof] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [aadharBase64, setAadharBase64] = useState([]);
+  const [paymentBase64, setPaymentBase64] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const recognitionRef = useRef(null);
+  const shouldListenRef = useRef(false);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'hi-IN'; // Hindi (can handle Hinglish/English mixed)
+      recognition.lang = 'hi-IN';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
+        shouldListenRef.current = false;
+        setIsListening(false);
         handleUserSpeech(transcript);
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        if (shouldListenRef.current) {
+          try {
+            recognition.start();
+          } catch(e) {}
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error", event.error);
+        shouldListenRef.current = false;
         setIsListening(false);
       };
 
@@ -42,9 +59,8 @@ export default function CustomerAiModal({ onClose, rooms }) {
   }, []);
 
   const handleUserSpeech = async (text) => {
-    if (bookingDetails) return; // Ignore speech if already in payment step
-
-    const newHistory = [...history, { role: 'user', content: text }];
+    const currentHistory = historyRef.current;
+    const newHistory = [...currentHistory, { role: 'user', content: text }];
     setHistory(newHistory);
     setLoading(true);
 
@@ -52,39 +68,67 @@ export default function CustomerAiModal({ onClose, rooms }) {
       const res = await axios.post('/api/ai/customer-booking', { history: newHistory });
 
       if (res.data.ready) {
-        setBookingDetails(res.data.data.details);
-        const msg = `Bahut badiya ${res.data.data.details.name}! Aapka total amount hai ${res.data.data.details.amount} rupaiye. Kripya niche apna Aadhar card aur payment ki receipt upload karein taaki hum booking pakki kar sakein.`;
-        setHistory(prev => [...prev, { role: 'model', content: msg }]);
-        speak(msg);
+        const bd = res.data.data;
+        setBookingDetails(bd);
+        
+        setHistory(prev => [...prev, { 
+          role: 'model', 
+          content: `Great! Aapka total amount ₹${bd.amount} hai. Please apna Aadhar aur Payment Receipt upload karein booking confirm karne ke liye.` 
+        }]);
+        speak("Aapki details mil gayi hain. Aapka total amount hai " + bd.amount + " rupaye. Booking pakki karne ke liye please apna Aadhar card aur payment screenshot upload karein.", false);
+        
+        setShowUploads(true);
       } else {
         const aiText = res.data.text;
         setHistory(prev => [...prev, { role: 'model', content: aiText }]);
-        speak(aiText);
+        speak(aiText, true);
       }
     } catch (err) {
       console.error(err);
-      const errMsg = "Sorry, network error aa gaya hai.";
+      const errMsg = err.response?.data?.error || "Sorry, koi error aa gaya hai.";
       setHistory(prev => [...prev, { role: 'model', content: errMsg }]);
-      speak("Sorry, kuch error aa gaya hai.");
+      speak("Sorry, kuch error aa gaya hai.", true);
     } finally {
       setLoading(false);
     }
   };
 
-  const speak = (text) => {
+  const speak = (text, resumeListening = false) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
+      
+      utterance.onend = () => {
+        if (resumeListening) {
+          shouldListenRef.current = true;
+          setIsListening(true);
+          try {
+            recognitionRef.current?.start();
+          } catch(e) {}
+        }
+      };
+      
       window.speechSynthesis.speak(utterance);
+    } else if (resumeListening) {
+      shouldListenRef.current = true;
+      setIsListening(true);
+      try {
+        recognitionRef.current?.start();
+      } catch(e) {}
     }
   };
 
   const toggleListen = () => {
     if (isListening) {
+      shouldListenRef.current = false;
+      setIsListening(false);
       recognitionRef.current?.stop();
     } else {
+      shouldListenRef.current = true;
       setIsListening(true);
-      recognitionRef.current?.start();
+      try {
+        recognitionRef.current?.start();
+      } catch (e) {}
     }
   };
 
