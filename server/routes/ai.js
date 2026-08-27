@@ -89,9 +89,13 @@ Output ONLY valid JSON if ready. If not, output text.
 
     try {
       let cleanText = responseText;
-      if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
-      if (cleanText.startsWith('```')) cleanText = cleanText.substring(3);
-      if (cleanText.endsWith('```')) cleanText = cleanText.substring(0, cleanText.length - 3);
+      const match = responseText.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);
+      if (match) {
+        cleanText = match[1];
+      } else {
+        const braceMatch = responseText.match(/\\{[\\s\\S]*\\}/);
+        if (braceMatch) cleanText = braceMatch[0];
+      }
       
       const parsed = JSON.parse(cleanText.trim());
       if (parsed.ready) {
@@ -176,9 +180,13 @@ Output ONLY JSON if ready. If not, output text.
 
     try {
       let cleanText = responseText;
-      if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
-      if (cleanText.startsWith('```')) cleanText = cleanText.substring(3);
-      if (cleanText.endsWith('```')) cleanText = cleanText.substring(0, cleanText.length - 3);
+      const match = responseText.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);
+      if (match) {
+        cleanText = match[1];
+      } else {
+        const braceMatch = responseText.match(/\\{[\\s\\S]*\\}/);
+        if (braceMatch) cleanText = braceMatch[0];
+      }
       
       const parsed = JSON.parse(cleanText.trim());
       if (parsed.ready) {
