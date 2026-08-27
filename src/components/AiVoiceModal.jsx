@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
 export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const [history, setHistory] = useState([]);
   const historyRef = useRef([]);
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const recognitionRef = useRef(null);
-  const shouldListenRef = useRef(false);
-  const utteranceRef = useRef(null); 
-  const transcriptBufferRef = useRef(''); // Buffer to store speech until manual stop
+  const transcriptBufferRef = useRef('');
+  const isListeningRef = useRef(false);
 
   useEffect(() => {
     historyRef.current = history;
@@ -18,61 +18,109 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      shouldListenRef.current = false;
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch(e) {}
-      }
+      isListeningRef.current = false;
+      stopRecognition();
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     };
   }, []);
 
-  useEffect(() => {
+  const createRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'hi-IN';
-      recognition.continuous = true; // Keep listening
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+    if (!SpeechRecognition) return null;
 
-      recognition.onresult = (event) => {
-        let newText = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            newText += event.results[i][0].transcript + ' ';
-          }
-        }
-        if (newText) {
-          transcriptBufferRef.current += newText;
-        }
-      };
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-      recognition.onend = () => {
-        // If it stopped automatically (due to pause/timeout) but user hasn't clicked stop
-        if (shouldListenRef.current) {
-          try {
-            recognition.start();
-          } catch (e) {}
-        } else {
-          setIsListening(false);
+    recognition.onresult = (event) => {
+      let newText = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          newText += event.results[i][0].transcript + ' ';
         }
-      };
+      }
+      if (newText.trim()) {
+        transcriptBufferRef.current += newText;
+      }
+    };
 
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        if (event.error !== 'no-speech') {
-          shouldListenRef.current = false;
-          setIsListening(false);
-        }
-      };
+    recognition.onend = () => {
+      // Auto-restart only if we're still supposed to be listening
+      if (isListeningRef.current) {
+        try {
+          // Small delay before restarting to avoid "already started" error
+          setTimeout(() => {
+            if (isListeningRef.current && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (e) {
+                // ignore
+              }
+            }
+          }, 100);
+        } catch (e) {}
+      }
+    };
 
-      recognitionRef.current = recognition;
-    }
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        alert('Microphone permission denied. Please allow microphone access.');
+        isListeningRef.current = false;
+        setIsListening(false);
+      }
+      // For other errors like "aborted", just try to restart if still listening
+    };
+
+    return recognition;
   }, []);
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+  };
+
+  const startListening = () => {
+    // Always create a fresh recognition instance to avoid stale state
+    stopRecognition();
+    transcriptBufferRef.current = '';
+    
+    const recognition = createRecognition();
+    if (!recognition) return;
+    
+    recognitionRef.current = recognition;
+    isListeningRef.current = true;
+    setIsListening(true);
+    
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error('Could not start recognition:', e);
+    }
+  };
+
+  const stopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    
+    // Stop and destroy the recognition instance
+    stopRecognition();
+    
+    const finalSpeech = transcriptBufferRef.current.trim();
+    transcriptBufferRef.current = '';
+    
+    if (finalSpeech) {
+      handleUserSpeech(finalSpeech);
+    }
+  };
 
   const handleUserSpeech = async (text) => {
     if (!text) return;
@@ -88,14 +136,13 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
       if (res.data.ready) {
         const intent = res.data.data.intent;
-        if (intent === 'block') {
-          setHistory(prev => [...prev, { role: 'model', content: "Room ko successfully block kiya jaa raha hai..." }]);
-          speak("Room ko successfully block kiya jaa raha hai.", false);
-        } else {
-          setHistory(prev => [...prev, { role: 'model', content: "Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon..." }]);
-          speak("Mubarak ho! Aapki details complete hain. Main booking save kar raha hoon.", false);
-        }
+        const successMsg = intent === 'block'
+          ? 'Room ko successfully block kiya jaa raha hai...'
+          : 'Mubarak ho! Booking save kar raha hoon...';
         
+        setHistory(prev => [...prev, { role: 'model', content: successMsg }]);
+        speak(successMsg, false);
+
         const bookingsToSave = res.data.data.bookings;
         for (const b of bookingsToSave) {
           await axios.post('/api/bookings/admin-direct', {
@@ -112,7 +159,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           });
         }
-        
+
         setTimeout(() => {
           onBookingSuccess();
           onClose();
@@ -121,79 +168,71 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       } else {
         const aiText = res.data.text;
         setHistory(prev => [...prev, { role: 'model', content: aiText }]);
-        speak(aiText, true); // true = resume listening after speaking
+        // After AI speaks, auto-restart listening
+        speak(aiText, true);
       }
     } catch (err) {
       console.error(err);
-      const errMsg = err.response?.data?.error || "Sorry, koi error aa gaya hai.";
+      const errMsg = err.response?.data?.error || 'Sorry, koi error aa gaya hai.';
       setHistory(prev => [...prev, { role: 'model', content: errMsg }]);
-      speak("Sorry, kuch error aa gaya hai.", true);
+      speak('Sorry, kuch error aa gaya hai.', true);
     } finally {
       setLoading(false);
     }
   };
 
-  const speak = (text, resumeListening = false) => {
+  const speak = (text, resumeListeningAfter = false) => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance; 
+      window.speechSynthesis.cancel();
+      setIsSpeaking(true);
 
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
-      utterance.rate = 0.95; 
+      utterance.rate = 0.95;
       utterance.pitch = 1;
-      
+
       const voices = window.speechSynthesis.getVoices();
-      const bestVoice = voices.find(v => v.lang.includes('hi') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))) 
-                        || voices.find(v => v.lang.includes('hi'));
-      
-      if (bestVoice) {
-        utterance.voice = bestVoice;
-      }
-      
+      const bestVoice = voices.find(v => v.lang.includes('hi') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium')))
+        || voices.find(v => v.lang.includes('hi'));
+      if (bestVoice) utterance.voice = bestVoice;
+
       utterance.onend = () => {
-        if (resumeListening) {
-          transcriptBufferRef.current = '';
-          shouldListenRef.current = true;
-          setIsListening(true);
-          try {
-            recognitionRef.current?.start();
-          } catch(e) {}
+        setIsSpeaking(false);
+        if (resumeListeningAfter) {
+          // Auto-restart microphone after AI finishes speaking
+          startListening();
         }
       };
-      
+
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        if (resumeListeningAfter) {
+          startListening();
+        }
+      };
+
       window.speechSynthesis.speak(utterance);
-    } else if (resumeListening) {
-      transcriptBufferRef.current = '';
-      shouldListenRef.current = true;
-      setIsListening(true);
-      try {
-        recognitionRef.current?.start();
-      } catch(e) {}
+    } else {
+      if (resumeListeningAfter) {
+        startListening();
+      }
     }
   };
 
   const toggleListen = () => {
     if (isListening) {
-      shouldListenRef.current = false;
-      setIsListening(false);
-      recognitionRef.current?.stop();
-      
-      const finalSpeech = transcriptBufferRef.current.trim();
-      if (finalSpeech) {
-        handleUserSpeech(finalSpeech);
-      }
-      transcriptBufferRef.current = '';
+      stopListening();
     } else {
-      window.speechSynthesis.cancel(); 
-      transcriptBufferRef.current = '';
-      shouldListenRef.current = true;
-      setIsListening(true);
-      try {
-        recognitionRef.current?.start();
-      } catch (e) {}
+      // Cancel any ongoing TTS before starting to listen
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsSpeaking(false);
+      startListening();
     }
   };
+
+  const isButtonDisabled = loading || isSpeaking;
 
   return (
     <div style={{
@@ -203,16 +242,17 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       <div style={{
         background: '#1a1a1a', padding: '2rem', borderRadius: '8px', maxWidth: '600px', width: '90%', height: '80vh', display: 'flex', flexDirection: 'column'
       }}>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-          <h3 style={{color: '#4caf50'}}>🎙️ AI Voice Assistant</h3>
-          <button onClick={onClose} style={{background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ color: '#4caf50' }}>🎙️ AI Voice Assistant</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
         </div>
 
-        <div style={{flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {history.length === 0 && (
-            <p style={{color: '#888', textAlign: 'center', marginTop: '2rem'}}>
-              Start speaking to book a room. For example: <br/><br/>
-              <i>"Kal room number 1 book karna hai"</i>
+            <p style={{ color: '#888', textAlign: 'center', marginTop: '2rem' }}>
+              Baat karein room book karne ke liye. Jaise:<br /><br />
+              <i>"Kal room number 1 book karna hai"</i><br />
+              <i>"Room 2 aur 4 kal se parso tak block karo"</i>
             </p>
           )}
           {history.map((msg, i) => (
@@ -224,23 +264,28 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
               {msg.content}
             </div>
           ))}
-          {loading && <div style={{color: '#888'}}>AI is thinking...</div>}
+          {loading && <div style={{ color: '#888', fontStyle: 'italic' }}>🤔 AI soch raha hai...</div>}
+          {isSpeaking && <div style={{ color: '#4fc3f7', fontStyle: 'italic' }}>🔊 AI bol raha hai...</div>}
+          {isListening && <div style={{ color: '#ff9800', fontStyle: 'italic' }}>👂 Sun raha hoon... (band karne ke liye dobara tap karein)</div>}
         </div>
 
-        <div style={{display: 'flex', justifyContent: 'center'}}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           {!(window.SpeechRecognition || window.webkitSpeechRecognition) ? (
-            <p style={{color: 'red'}}>Speech Recognition not supported in this browser.</p>
+            <p style={{ color: 'red' }}>Speech Recognition is browser mein support nahi hai. Chrome use karein.</p>
           ) : (
-            <button 
-              onClick={toggleListen} 
-              disabled={loading}
+            <button
+              onClick={toggleListen}
+              disabled={isButtonDisabled}
               style={{
-                background: isListening ? '#f44336' : '#4caf50',
+                background: isListening ? '#f44336' : (isButtonDisabled ? '#555' : '#4caf50'),
                 color: 'white', padding: '1rem 2rem', border: 'none', borderRadius: '50px',
-                fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'
+                fontSize: '1.1rem', cursor: isButtonDisabled ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                transition: 'background 0.3s',
+                opacity: isButtonDisabled ? 0.7 : 1
               }}
             >
-              {isListening ? '🛑 Stop Listening' : '🎤 Tap to Speak'}
+              {loading ? '⏳ Wait karein...' : isSpeaking ? '🔊 AI bol raha hai...' : isListening ? '🛑 Band Karo' : '🎤 Tap to Speak'}
             </button>
           )}
         </div>
