@@ -29,7 +29,9 @@ export default function CustomerAiModal({ onClose, rooms }) {
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
-      stopRecognition();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -42,7 +44,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = true;
+    recognition.continuous = false; // Auto-stop when user pauses
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -59,16 +61,20 @@ export default function CustomerAiModal({ onClose, rooms }) {
     };
 
     recognition.onend = () => {
-      if (isListeningRef.current) {
+      const finalText = transcriptBufferRef.current.trim();
+      if (finalText) {
+        // We have speech! Process it and stop listening.
+        transcriptBufferRef.current = '';
+        isListeningRef.current = false;
+        setIsListening(false);
+        handleUserSpeech(finalText);
+      } else if (isListeningRef.current) {
+        // No speech yet, but user still wants to listen, so restart
         try {
-          setTimeout(() => {
-            if (isListeningRef.current && recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {}
-            }
-          }, 100);
+          recognitionRef.current?.start();
         } catch (e) {}
+      } else {
+        setIsListening(false);
       }
     };
 
@@ -84,17 +90,10 @@ export default function CustomerAiModal({ onClose, rooms }) {
     return recognition;
   }, []);
 
-  const stopRecognition = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
-  };
-
   const startListening = () => {
-    stopRecognition();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
     transcriptBufferRef.current = '';
     
     const recognition = createRecognition();
@@ -106,19 +105,8 @@ export default function CustomerAiModal({ onClose, rooms }) {
     
     try {
       recognition.start();
-    } catch (e) {}
-  };
-
-  const stopListening = () => {
-    isListeningRef.current = false;
-    setIsListening(false);
-    stopRecognition();
-    
-    const finalSpeech = transcriptBufferRef.current.trim();
-    transcriptBufferRef.current = '';
-    
-    if (finalSpeech) {
-      handleUserSpeech(finalSpeech);
+    } catch (e) {
+      console.error('Could not start recognition:', e);
     }
   };
 
@@ -134,7 +122,6 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
       if (res.data.ready) {
         const bd = res.data.data;
-        // Sometimes the AI nests details in `data.details`, sometimes directly in `data` depending on the prompt execution.
         const actualBookingDetails = bd.details || bd;
         setBookingDetails(actualBookingDetails);
         
@@ -198,7 +185,11 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
   const toggleListen = () => {
     if (isListening) {
-      stopListening();
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
     } else {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();

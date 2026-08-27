@@ -19,7 +19,9 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
-      stopRecognition();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -32,7 +34,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = true;
+    recognition.continuous = false; // Auto-stop when user pauses
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -49,20 +51,20 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
     };
 
     recognition.onend = () => {
-      // Auto-restart only if we're still supposed to be listening
-      if (isListeningRef.current) {
+      const finalText = transcriptBufferRef.current.trim();
+      if (finalText) {
+        // We have speech! Process it and stop listening.
+        transcriptBufferRef.current = '';
+        isListeningRef.current = false;
+        setIsListening(false);
+        handleUserSpeech(finalText);
+      } else if (isListeningRef.current) {
+        // No speech yet, but user still wants to listen, so restart
         try {
-          // Small delay before restarting to avoid "already started" error
-          setTimeout(() => {
-            if (isListeningRef.current && recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {
-                // ignore
-              }
-            }
-          }, 100);
+          recognitionRef.current?.start();
         } catch (e) {}
+      } else {
+        setIsListening(false);
       }
     };
 
@@ -73,24 +75,15 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
         isListeningRef.current = false;
         setIsListening(false);
       }
-      // For other errors like "aborted", just try to restart if still listening
     };
 
     return recognition;
   }, []);
 
-  const stopRecognition = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
-  };
-
   const startListening = () => {
-    // Always create a fresh recognition instance to avoid stale state
-    stopRecognition();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
     transcriptBufferRef.current = '';
     
     const recognition = createRecognition();
@@ -104,21 +97,6 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       recognition.start();
     } catch (e) {
       console.error('Could not start recognition:', e);
-    }
-  };
-
-  const stopListening = () => {
-    isListeningRef.current = false;
-    setIsListening(false);
-    
-    // Stop and destroy the recognition instance
-    stopRecognition();
-    
-    const finalSpeech = transcriptBufferRef.current.trim();
-    transcriptBufferRef.current = '';
-    
-    if (finalSpeech) {
-      handleUserSpeech(finalSpeech);
     }
   };
 
@@ -199,7 +177,6 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       utterance.onend = () => {
         setIsSpeaking(false);
         if (resumeListeningAfter) {
-          // Auto-restart microphone after AI finishes speaking
           startListening();
         }
       };
@@ -221,9 +198,12 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
   const toggleListen = () => {
     if (isListening) {
-      stopListening();
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
     } else {
-      // Cancel any ongoing TTS before starting to listen
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
