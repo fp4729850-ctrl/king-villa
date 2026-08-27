@@ -7,6 +7,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
   
   // Booking flow states
   const [showUploads, setShowUploads] = useState(false);
@@ -44,37 +45,34 @@ export default function CustomerAiModal({ onClose, rooms }) {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = false; // Auto-stop when user pauses
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let newText = '';
+      let finalSpeech = '';
+      let interimSpeech = '';
+      
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-          newText += event.results[i][0].transcript + ' ';
+          finalSpeech += event.results[i][0].transcript + ' ';
+        } else {
+          interimSpeech += event.results[i][0].transcript + ' ';
         }
       }
-      if (newText.trim()) {
-        transcriptBufferRef.current += newText;
+      
+      if (finalSpeech) {
+        transcriptBufferRef.current += finalSpeech;
       }
+      
+      setLiveTranscript(transcriptBufferRef.current + interimSpeech);
     };
 
     recognition.onend = () => {
-      const finalText = transcriptBufferRef.current.trim();
-      if (finalText) {
-        // We have speech! Process it and stop listening.
-        transcriptBufferRef.current = '';
-        isListeningRef.current = false;
-        setIsListening(false);
-        handleUserSpeech(finalText);
-      } else if (isListeningRef.current) {
-        // No speech yet, but user still wants to listen, so restart
+      if (isListeningRef.current) {
         try {
           recognitionRef.current?.start();
         } catch (e) {}
-      } else {
-        setIsListening(false);
       }
     };
 
@@ -95,6 +93,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
     transcriptBufferRef.current = '';
+    setLiveTranscript('');
     
     const recognition = createRecognition();
     if (!recognition) return;
@@ -107,6 +106,23 @@ export default function CustomerAiModal({ onClose, rooms }) {
       recognition.start();
     } catch (e) {
       console.error('Could not start recognition:', e);
+    }
+  };
+
+  const stopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    
+    const finalSpeech = transcriptBufferRef.current.trim() || liveTranscript.trim();
+    transcriptBufferRef.current = '';
+    setLiveTranscript('');
+    
+    if (finalSpeech) {
+      handleUserSpeech(finalSpeech);
     }
   };
 
@@ -312,6 +328,16 @@ export default function CustomerAiModal({ onClose, rooms }) {
               {msg.content}
             </div>
           ))}
+          {liveTranscript && isListening && (
+            <div style={{
+              alignSelf: 'flex-end',
+              background: 'rgba(76, 175, 80, 0.5)',
+              color: '#fff', padding: '0.6rem 1rem', borderRadius: '12px', maxWidth: '85%', fontStyle: 'italic',
+              borderBottomRightRadius: '2px'
+            }}>
+              {liveTranscript}
+            </div>
+          )}
           {loading && <div style={{ color: '#888', fontStyle: 'italic' }}>🤔 AI soch raha hai...</div>}
           {isSpeaking && <div style={{ color: '#4fc3f7', fontStyle: 'italic' }}>🔊 AI bol raha hai...</div>}
           {isListening && <div style={{ color: '#ff9800', fontStyle: 'italic' }}>👂 Sun raha hoon... (band karne ke liye dobara tap karein)</div>}

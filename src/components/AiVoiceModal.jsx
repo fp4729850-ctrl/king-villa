@@ -7,6 +7,8 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState(''); // Added to show live text
+  
   const recognitionRef = useRef(null);
   const transcriptBufferRef = useRef('');
   const isListeningRef = useRef(false);
@@ -34,37 +36,35 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = false; // Auto-stop when user pauses
-    recognition.interimResults = false;
+    recognition.continuous = true; // Changed back to true for better stability
+    recognition.interimResults = true; // Enable interim results to show live feedback
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let newText = '';
+      let finalSpeech = '';
+      let interimSpeech = '';
+      
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-          newText += event.results[i][0].transcript + ' ';
+          finalSpeech += event.results[i][0].transcript + ' ';
+        } else {
+          interimSpeech += event.results[i][0].transcript + ' ';
         }
       }
-      if (newText.trim()) {
-        transcriptBufferRef.current += newText;
+      
+      if (finalSpeech) {
+        transcriptBufferRef.current += finalSpeech;
       }
+      // Update UI with both confirmed buffer + current interim
+      setLiveTranscript(transcriptBufferRef.current + interimSpeech);
     };
 
     recognition.onend = () => {
-      const finalText = transcriptBufferRef.current.trim();
-      if (finalText) {
-        // We have speech! Process it and stop listening.
-        transcriptBufferRef.current = '';
-        isListeningRef.current = false;
-        setIsListening(false);
-        handleUserSpeech(finalText);
-      } else if (isListeningRef.current) {
-        // No speech yet, but user still wants to listen, so restart
+      // If it stops, and we were supposed to be listening, try to restart
+      if (isListeningRef.current) {
         try {
           recognitionRef.current?.start();
         } catch (e) {}
-      } else {
-        setIsListening(false);
       }
     };
 
@@ -85,6 +85,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
     transcriptBufferRef.current = '';
+    setLiveTranscript('');
     
     const recognition = createRecognition();
     if (!recognition) return;
@@ -97,6 +98,24 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       recognition.start();
     } catch (e) {
       console.error('Could not start recognition:', e);
+    }
+  };
+
+  const stopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    
+    // Fallback to liveTranscript if buffer didn't catch the final word
+    const finalSpeech = transcriptBufferRef.current.trim() || liveTranscript.trim();
+    transcriptBufferRef.current = '';
+    setLiveTranscript('');
+    
+    if (finalSpeech) {
+      handleUserSpeech(finalSpeech);
     }
   };
 
@@ -244,6 +263,15 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
               {msg.content}
             </div>
           ))}
+          {liveTranscript && isListening && (
+            <div style={{
+              alignSelf: 'flex-end',
+              background: 'rgba(76, 175, 80, 0.5)',
+              color: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', maxWidth: '80%', fontStyle: 'italic'
+            }}>
+              {liveTranscript}
+            </div>
+          )}
           {loading && <div style={{ color: '#888', fontStyle: 'italic' }}>🤔 AI soch raha hai...</div>}
           {isSpeaking && <div style={{ color: '#4fc3f7', fontStyle: 'italic' }}>🔊 AI bol raha hai...</div>}
           {isListening && <div style={{ color: '#ff9800', fontStyle: 'italic' }}>👂 Sun raha hoon... (band karne ke liye dobara tap karein)</div>}
