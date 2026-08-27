@@ -15,10 +15,16 @@ router.post('/booking', adminAuth, async (req, res) => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
 
-    const roomsRes = await db.query('SELECT id, name FROM rooms');
+    const roomsRes = await db.query('SELECT id, name, "isEntireVilla" FROM rooms');
     const roomsStr = JSON.stringify(roomsRes.rows);
 
-    const existingBookingsRes = await db.query('SELECT "roomId", "checkIn", "checkOut" FROM bookings WHERE status != $1', ['cancelled']);
+    const existingBookingsRes = await db.query(`
+      SELECT "roomId", 
+             TO_CHAR("checkIn", 'YYYY-MM-DD') as "checkIn", 
+             TO_CHAR("checkOut", 'YYYY-MM-DD') as "checkOut" 
+      FROM bookings 
+      WHERE status != 'cancelled'
+    `);
     const existingBookingsStr = JSON.stringify(existingBookingsRes.rows);
 
     const systemInstruction = `
@@ -41,6 +47,7 @@ For BLOCKING A ROOM (e.g., "room 1 ko block kardo"), you only need:
 CRITICAL AVAILABILITY CHECK:
 Here is a list of existing booked dates: ${existingBookingsStr}
 Before confirming ANY booking or block, you MUST check if the requested room is already booked on the requested dates. A room is unavailable if the requested [check-in, check-out) date range overlaps with an existing booking's [checkIn, checkOut) for that roomId. 
+CRITICAL RULE: If a room with "isEntireVilla":true is booked on a date, ALL OTHER ROOMS are also unavailable on that date. If a normal room is booked, the "isEntireVilla" room is unavailable.
 If the room is already booked, you MUST politely reject the request in Hinglish, state that the room is already booked on those dates. DO NOT output JSON in this case.
 
 If information is missing, ask a friendly question in Hinglish. DO NOT output JSON if info is missing.
@@ -126,10 +133,16 @@ router.post('/customer-booking', async (req, res) => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
 
-    const roomsRes = await db.query('SELECT id, name, price FROM rooms');
+    const roomsRes = await db.query('SELECT id, name, price, "isEntireVilla" FROM rooms');
     const roomsStr = JSON.stringify(roomsRes.rows);
 
-    const existingBookingsRes = await db.query('SELECT "roomId", "checkIn", "checkOut" FROM bookings WHERE status != $1', ['cancelled']);
+    const existingBookingsRes = await db.query(`
+      SELECT "roomId", 
+             TO_CHAR("checkIn", 'YYYY-MM-DD') as "checkIn", 
+             TO_CHAR("checkOut", 'YYYY-MM-DD') as "checkOut" 
+      FROM bookings 
+      WHERE status != 'cancelled'
+    `);
     const existingBookingsStr = JSON.stringify(existingBookingsRes.rows);
 
     const systemInstruction = `
@@ -146,6 +159,7 @@ To create a booking, you must extract 5 pieces of information:
 
 CRITICAL AVAILABILITY CHECK:
 Existing booked dates: ${existingBookingsStr}
+CRITICAL RULE: If a room with "isEntireVilla":true is booked on a date, ALL OTHER ROOMS are also unavailable on that date. If a normal room is booked, the "isEntireVilla" room is unavailable.
 If the requested room is already booked on those dates, politely tell the customer it is unavailable and suggest different dates or another room. DO NOT output JSON.
 
 If ANY info is missing, politely ask the customer for it. DO NOT output JSON.
