@@ -12,6 +12,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const recognitionRef = useRef(null);
   const transcriptBufferRef = useRef('');
   const isListeningRef = useRef(false);
+  const silenceTimerRef = useRef(null);
 
   useEffect(() => {
     historyRef.current = history;
@@ -21,6 +22,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
@@ -36,8 +38,8 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'hi-IN';
-    recognition.continuous = true; // Changed back to true for better stability
-    recognition.interimResults = true; // Enable interim results to show live feedback
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
@@ -55,12 +57,24 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
       if (finalSpeech) {
         transcriptBufferRef.current += finalSpeech;
       }
-      // Update UI with both confirmed buffer + current interim
-      setLiveTranscript(transcriptBufferRef.current + interimSpeech);
+      
+      const currentFullText = transcriptBufferRef.current + interimSpeech;
+      setLiveTranscript(currentFullText);
+
+      // Reset silence timer whenever speech is detected
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      
+      if (currentFullText.trim()) {
+        silenceTimerRef.current = setTimeout(() => {
+          // After 2.5s of silence, auto-stop and send to AI
+          if (isListeningRef.current) {
+            stopListening();
+          }
+        }, 2500);
+      }
     };
 
     recognition.onend = () => {
-      // If it stops, and we were supposed to be listening, try to restart
       if (isListeningRef.current) {
         try {
           recognitionRef.current?.start();
@@ -84,6 +98,7 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     transcriptBufferRef.current = '';
     setLiveTranscript('');
     
@@ -104,12 +119,12 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
   const stopListening = () => {
     isListeningRef.current = false;
     setIsListening(false);
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
     
-    // Fallback to liveTranscript if buffer didn't catch the final word
     const finalSpeech = transcriptBufferRef.current.trim() || liveTranscript.trim();
     transcriptBufferRef.current = '';
     setLiveTranscript('');

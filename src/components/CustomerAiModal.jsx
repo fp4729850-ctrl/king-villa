@@ -21,6 +21,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
   const recognitionRef = useRef(null);
   const transcriptBufferRef = useRef('');
   const isListeningRef = useRef(false);
+  const silenceTimerRef = useRef(null); // Added silence timer
 
   useEffect(() => {
     historyRef.current = history;
@@ -30,6 +31,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
@@ -65,7 +67,20 @@ export default function CustomerAiModal({ onClose, rooms }) {
         transcriptBufferRef.current += finalSpeech;
       }
       
-      setLiveTranscript(transcriptBufferRef.current + interimSpeech);
+      const currentFullText = transcriptBufferRef.current + interimSpeech;
+      setLiveTranscript(currentFullText);
+
+      // Reset silence timer whenever speech is detected
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      
+      if (currentFullText.trim()) {
+        silenceTimerRef.current = setTimeout(() => {
+          // If 2.5 seconds pass with no new speech, auto-stop and submit
+          if (isListeningRef.current) {
+            stopListening();
+          }
+        }, 2500);
+      }
     };
 
     recognition.onend = () => {
@@ -92,6 +107,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     transcriptBufferRef.current = '';
     setLiveTranscript('');
     
@@ -112,6 +128,7 @@ export default function CustomerAiModal({ onClose, rooms }) {
   const stopListening = () => {
     isListeningRef.current = false;
     setIsListening(false);
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
