@@ -25,6 +25,21 @@ export default function CustomerAiModal({ onClose, rooms }) {
     historyRef.current = history;
   }, [history]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      shouldListenRef.current = false;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch(e) {}
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
