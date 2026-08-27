@@ -112,6 +112,17 @@ export default function AiVoiceModal({ onClose, onBookingSuccess, rooms }) {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
+      utterance.rate = 0.95; // Slightly slower for more natural feel
+      utterance.pitch = 1;
+      
+      // Try to get a high-quality human-like voice (like Google's)
+      const voices = window.speechSynthesis.getVoices();
+      const bestVoice = voices.find(v => v.lang.includes('hi') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))) 
+                        || voices.find(v => v.lang.includes('hi'));
+      
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
       
       utterance.onend = () => {
         if (resumeListening) {

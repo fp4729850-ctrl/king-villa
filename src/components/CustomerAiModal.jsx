@@ -97,6 +97,16 @@ export default function CustomerAiModal({ onClose, rooms }) {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
+      utterance.rate = 0.95; 
+      utterance.pitch = 1;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const bestVoice = voices.find(v => v.lang.includes('hi') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))) 
+                        || voices.find(v => v.lang.includes('hi'));
+      
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
       
       utterance.onend = () => {
         if (resumeListening) {
