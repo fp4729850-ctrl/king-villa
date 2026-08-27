@@ -18,7 +18,19 @@ router.get(['/export/:roomId', '/export/:roomId.ics'], async (req, res) => {
       WHERE "roomId" = $1 AND status IN ('paid', 'confirmed', 'cancel_request', 'external')
     `, [roomId]);
 
-    const cal = icalGenerator({ name: `King Villa - ${roomName}` });
+    const cal = icalGenerator({ 
+      name: `King Villa - ${roomName}`,
+      method: 'PUBLISH'
+    });
+
+    // Add a dummy event in the past so the calendar is never empty (fixes Agoda validation)
+    cal.createEvent({
+      start: new Date('2020-01-01T00:00:00Z'),
+      end: new Date('2020-01-02T00:00:00Z'),
+      summary: 'Calendar Creation',
+      description: 'System dummy event',
+      id: 'dummy-event-1'
+    });
 
     bookingsRes.rows.forEach(b => {
       cal.createEvent({
